@@ -195,7 +195,9 @@ userSchema.virtual("fullName").get(function () {
 
 // Virtual for connection count
 userSchema.virtual("connectionCount").get(function () {
-  return this.connections.filter((conn) => conn.status === "accepted").length;
+  return this.connections
+    ? this.connections.filter((conn) => conn.status === "accepted").length
+    : 0;
 });
 
 // Pre-save middleware to hash password

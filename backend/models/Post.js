@@ -65,6 +65,7 @@ const postSchema = new mongoose.Schema(
         "Design",
         "Marketing",
         "Sales",
+        "Career",
         "Other",
       ],
       default: "General",

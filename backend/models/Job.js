@@ -151,6 +151,7 @@ const jobSchema = new mongoose.Schema(
           "Dental Insurance",
           "Vision Insurance",
           "Retirement Plan",
+          "401k",
           "Paid Time Off",
           "Flexible Schedule",
           "Remote Work",
@@ -217,6 +218,7 @@ const jobSchema = new mongoose.Schema(
           default: "pending",
         },
         coverLetter: String,
+        expectedSalary: Number,
         resume: {
           url: String,
           public_id: String,

@@ -86,6 +86,7 @@ const profileUpdateSchema = Joi.object({
   }),
   jobPreferences: Joi.object({
     roles: Joi.array().items(Joi.string().trim().max(100)),
+    desiredRoles: Joi.array().items(Joi.string().trim().max(100)),
     jobTypes: Joi.array().items(
       Joi.string().valid(
         "Full-time",
@@ -96,7 +97,13 @@ const profileUpdateSchema = Joi.object({
       )
     ),
     remoteWork: Joi.string().valid("On-site", "Remote", "Hybrid"),
+    preferredLocation: Joi.string().trim().max(100),
     salaryRange: Joi.object({
+      min: Joi.number().min(0),
+      max: Joi.number().min(0),
+      currency: Joi.string().length(3).uppercase(),
+    }),
+    salaryExpectation: Joi.object({
       min: Joi.number().min(0),
       max: Joi.number().min(0),
       currency: Joi.string().length(3).uppercase(),
@@ -130,6 +137,7 @@ const jobCreateSchema = Joi.object({
     "string.max": "Job description cannot exceed 5000 characters",
     "any.required": "Job description is required",
   }),
+  requirements: Joi.array().items(Joi.string().trim().max(500)),
   company: Joi.object({
     name: Joi.string().trim().min(2).max(100).required(),
     website: Joi.string().uri().allow(""),
@@ -160,7 +168,11 @@ const jobCreateSchema = Joi.object({
         level: Joi.string()
           .valid("Beginner", "Intermediate", "Advanced", "Expert")
           .default("Intermediate"),
+        proficiency: Joi.string()
+          .valid("Beginner", "Intermediate", "Advanced", "Expert")
+          .default("Intermediate"),
         isRequired: Joi.boolean().default(true),
+        required: Joi.boolean().default(true),
       })
     )
     .min(1)
@@ -191,11 +203,12 @@ const jobCreateSchema = Joi.object({
       "Engineering",
       "Other"
     )
-    .required(),
+    .optional(),
   applicationDeadline: Joi.date().greater("now"),
   applicationMethod: Joi.string()
     .valid("internal", "external", "email")
     .default("internal"),
+  benefits: Joi.array().items(Joi.string().trim().max(100)),
   externalApplicationUrl: Joi.string().uri().when("applicationMethod", {
     is: "external",
     then: Joi.required(),
@@ -241,6 +254,7 @@ const postCreateSchema = Joi.object({
       "Design",
       "Marketing",
       "Sales",
+      "Career",
       "Other"
     )
     .default("General"),
@@ -375,6 +389,7 @@ const applicationSchema = Joi.object({
     "string.max": "Cover letter cannot exceed 1000 characters",
   }),
   resumeUrl: Joi.string().uri().allow(""),
+  expectedSalary: Joi.number().min(0).allow(""),
 });
 
 // Comment schema (alias for commentCreateSchema)
