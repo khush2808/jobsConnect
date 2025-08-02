@@ -189,14 +189,18 @@ const jobsSlice = createSlice({
       })
 
       // Fetch My Jobs
+      .addCase(fetchMyJobs.pending, (state) => {})
       .addCase(fetchMyJobs.fulfilled, (state, action) => {
         state.myJobs = action.payload.data;
       })
+      .addCase(fetchMyJobs.rejected, (state, action) => {})
 
       // Fetch My Applications
+      .addCase(fetchMyApplications.pending, (state) => {})
       .addCase(fetchMyApplications.fulfilled, (state, action) => {
         state.myApplications = action.payload.data;
-      });
+      })
+      .addCase(fetchMyApplications.rejected, (state, action) => {});
   },
 });
 

@@ -15,4 +15,5 @@ export const store = configureStore({
         ignoredActions: ["persist/PERSIST"],
       },
     }),
+  devTools: process.env.NODE_ENV !== "production",
 });

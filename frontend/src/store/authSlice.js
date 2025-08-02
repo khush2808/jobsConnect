@@ -2,25 +2,14 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../lib/api";
 
 // Async thunks for API calls
-export const initAuth = createAsyncThunk(
-  "auth/initAuth",
-  async (_, { rejectWithValue }) => {
-    try {
-      console.log("🔍 initAuth: Checking authentication status...");
-      const response = await api.get("/auth/me");
-      console.log("✅ initAuth: User authenticated successfully");
-      return response.data.user;
-    } catch (error) {
-      console.log(
-        "❌ initAuth: Authentication failed:",
-        error.response?.data?.message || error.message
-      );
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to get user"
-      );
-    }
+export const initAuth = createAsyncThunk("auth/initAuth", async () => {
+  try {
+    const response = await api.get("/auth/me");
+    return response.data.user;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to get user");
   }
-);
+});
 
 export const login = createAsyncThunk(
   "auth/login",
@@ -48,18 +37,15 @@ export const register = createAsyncThunk(
   }
 );
 
-export const logout = createAsyncThunk(
-  "auth/logout",
-  async (_, { rejectWithValue }) => {
-    try {
-      await api.post("/auth/logout");
-      return true;
-    } catch (error) {
-      // Still return success even if server logout fails
-      return true;
-    }
+export const logout = createAsyncThunk("auth/logout", async () => {
+  try {
+    await api.post("/auth/logout");
+    return true;
+  } catch {
+    // Still return success even if server logout fails
+    return true;
   }
-);
+});
 
 export const updateUserProfile = createAsyncThunk(
   "auth/updateUserProfile",
