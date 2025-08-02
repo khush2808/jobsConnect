@@ -4,6 +4,10 @@ const {
   updateProfile,
   uploadProfilePicture,
   removeProfilePicture,
+  uploadResume,
+  removeResume,
+  getResume,
+  uploadCompanyLogo,
   updateSkills,
   searchUsers,
   sendConnectionRequest,
@@ -27,6 +31,10 @@ router.get("/connections", getConnections);
 router.put("/profile", validate(profileUpdateSchema), updateProfile);
 router.post("/profile-picture", uploadProfilePicture);
 router.delete("/profile-picture", removeProfilePicture);
+router.post("/resume", uploadResume);
+router.delete("/resume", removeResume);
+router.get("/resume", getResume);
+router.post("/company-logo", uploadCompanyLogo);
 router.put("/skills", updateSkills);
 
 // Public/optional auth routes

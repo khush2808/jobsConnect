@@ -1,6 +1,10 @@
 const User = require("../models/User");
 const {
   profilePictureUpload,
+  resumeUpload,
+  companyLogoUpload,
+  uploadResumeToCloudinary,
+  parsePDF,
   deleteFromCloudinary,
 } = require("../services/fileUploadService");
 
@@ -223,6 +227,252 @@ const removeProfilePicture = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Server error removing profile picture",
+    });
+  }
+};
+
+/**
+ * Upload resume
+ * @route POST /api/users/resume
+ * @access Private
+ */
+const uploadResume = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // Handle file upload
+    resumeUpload.single("resume")(req, res, async (err) => {
+      if (err) {
+        return res.status(400).json({
+          success: false,
+          message: err.message,
+        });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: "No resume file uploaded",
+        });
+      }
+
+      try {
+        const user = await User.findById(userId);
+
+        // Parse PDF and extract text for preview
+        let resumeText = "";
+        try {
+          resumeText = await parsePDF(req.file.buffer);
+        } catch (parseError) {
+          console.warn("Failed to parse PDF:", parseError);
+        }
+
+        // Delete old resume if exists
+        if (user.resume && user.resume.public_id) {
+          try {
+            await deleteFromCloudinary(user.resume.public_id, "raw");
+          } catch (deleteError) {
+            console.warn("Failed to delete old resume:", deleteError);
+          }
+        }
+
+        // Upload resume to Cloudinary
+        const uploadResult = await uploadResumeToCloudinary(
+          req.file.buffer,
+          req.file.originalname
+        );
+
+        // Update user with new resume
+        user.resume = {
+          url: uploadResult.secure_url,
+          public_id: uploadResult.public_id,
+          filename: req.file.originalname,
+          uploadedAt: new Date(),
+        };
+
+        await user.save();
+
+        res.status(200).json({
+          success: true,
+          message: "Resume uploaded successfully",
+          resume: {
+            url: user.resume.url,
+            filename: user.resume.filename,
+            uploadedAt: user.resume.uploadedAt,
+            preview: resumeText.substring(0, 200) + "...", // First 200 chars for preview
+          },
+        });
+      } catch (dbError) {
+        console.error("Database error during resume upload:", dbError);
+        res.status(500).json({
+          success: false,
+          message: "Failed to save resume",
+        });
+      }
+    });
+  } catch (error) {
+    console.error("Upload resume error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error uploading resume",
+    });
+  }
+};
+
+/**
+ * Remove resume
+ * @route DELETE /api/users/resume
+ * @access Private
+ */
+const removeResume = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const user = await User.findById(userId);
+
+    if (!user.resume || !user.resume.public_id) {
+      return res.status(400).json({
+        success: false,
+        message: "No resume to remove",
+      });
+    }
+
+    // Delete from Cloudinary
+    try {
+      await deleteFromCloudinary(user.resume.public_id, "raw");
+    } catch (deleteError) {
+      console.warn("Failed to delete from Cloudinary:", deleteError);
+    }
+
+    // Remove from database
+    user.resume = undefined;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Resume removed successfully",
+    });
+  } catch (error) {
+    console.error("Remove resume error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error removing resume",
+    });
+  }
+};
+
+/**
+ * Get resume info
+ * @route GET /api/users/resume
+ * @access Private
+ */
+const getResume = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const user = await User.findById(userId).select("resume");
+
+    if (!user.resume) {
+      return res.status(404).json({
+        success: false,
+        message: "No resume found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      resume: {
+        url: user.resume.url,
+        filename: user.resume.filename,
+        uploadedAt: user.resume.uploadedAt,
+      },
+    });
+  } catch (error) {
+    console.error("Get resume error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error getting resume",
+    });
+  }
+};
+
+/**
+ * Upload company logo
+ * @route POST /api/users/company-logo
+ * @access Private
+ */
+const uploadCompanyLogo = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // Check if user is an employer
+    const user = await User.findById(userId);
+    if (!user || user.accountType !== "employer") {
+      return res.status(403).json({
+        success: false,
+        message: "Only employers can upload company logos",
+      });
+    }
+
+    // Handle file upload
+    companyLogoUpload.single("companyLogo")(req, res, async (err) => {
+      if (err) {
+        return res.status(400).json({
+          success: false,
+          message: err.message,
+        });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: "No company logo uploaded",
+        });
+      }
+
+      try {
+        // Delete old company logo if exists
+        if (
+          user.companyInfo &&
+          user.companyInfo.logo &&
+          user.companyInfo.logo.public_id
+        ) {
+          try {
+            await deleteFromCloudinary(user.companyInfo.logo.public_id);
+          } catch (deleteError) {
+            console.warn("Failed to delete old company logo:", deleteError);
+          }
+        }
+
+        // Initialize companyInfo if it doesn't exist
+        if (!user.companyInfo) {
+          user.companyInfo = {};
+        }
+
+        // Update user with new company logo
+        user.companyInfo.logo = {
+          url: req.file.path,
+          public_id: req.file.filename,
+        };
+
+        await user.save();
+
+        res.status(200).json({
+          success: true,
+          message: "Company logo uploaded successfully",
+          logo: user.companyInfo.logo,
+        });
+      } catch (dbError) {
+        console.error("Database error during company logo upload:", dbError);
+        res.status(500).json({
+          success: false,
+          message: "Failed to save company logo",
+        });
+      }
+    });
+  } catch (error) {
+    console.error("Upload company logo error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error uploading company logo",
     });
   }
 };
@@ -587,6 +837,10 @@ module.exports = {
   updateProfile,
   uploadProfilePicture,
   removeProfilePicture,
+  uploadResume,
+  removeResume,
+  getResume,
+  uploadCompanyLogo,
   updateSkills,
   searchUsers,
   sendConnectionRequest,

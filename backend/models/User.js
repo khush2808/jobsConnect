@@ -44,6 +44,15 @@ const userSchema = new mongoose.Schema(
       url: String,
       public_id: String, // Cloudinary public ID for deletion
     },
+    resume: {
+      url: String,
+      public_id: String, // Cloudinary public ID for deletion
+      filename: String, // Original filename
+      uploadedAt: {
+        type: Date,
+        default: Date.now,
+      },
+    },
     linkedinUrl: {
       type: String,
       validate: {
@@ -224,6 +233,7 @@ userSchema.pre("save", function (next) {
     "email",
     "bio",
     "profilePicture.url",
+    "resume.url",
     "skills",
     "location.city",
     "jobPreferences.roles",
