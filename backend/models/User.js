@@ -189,6 +189,52 @@ const userSchema = new mongoose.Schema(
       industry: String,
       description: String,
     },
+
+    // Notification settings
+    notificationSettings: {
+      emailNotifications: {
+        type: Boolean,
+        default: true,
+      },
+      pushNotifications: {
+        type: Boolean,
+        default: true,
+      },
+      jobAlerts: {
+        type: Boolean,
+        default: true,
+      },
+      connectionRequests: {
+        type: Boolean,
+        default: true,
+      },
+      applicationUpdates: {
+        type: Boolean,
+        default: true,
+      },
+      marketingEmails: {
+        type: Boolean,
+        default: false,
+      },
+    },
+
+    // Appearance settings
+    appearanceSettings: {
+      theme: {
+        type: String,
+        enum: ["light", "dark", "system"],
+        default: "light",
+      },
+      language: {
+        type: String,
+        enum: ["en", "es", "fr", "de"],
+        default: "en",
+      },
+      timezone: {
+        type: String,
+        default: "UTC",
+      },
+    },
   },
   {
     timestamps: true,
