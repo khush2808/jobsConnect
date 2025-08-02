@@ -832,6 +832,123 @@ const removeConnection = async (req, res) => {
   }
 };
 
+/**
+ * Update notification settings
+ * @route PUT /api/users/notifications
+ * @access Private
+ */
+const updateNotificationSettings = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const notificationSettings = req.body;
+
+    // Validate notification settings
+    const validSettings = [
+      "emailNotifications",
+      "pushNotifications",
+      "jobAlerts",
+      "connectionRequests",
+      "applicationUpdates",
+      "marketingEmails",
+    ];
+
+    const updates = {};
+    validSettings.forEach((setting) => {
+      if (typeof notificationSettings[setting] === "boolean") {
+        updates[`notificationSettings.${setting}`] =
+          notificationSettings[setting];
+      }
+    });
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Notification settings updated successfully",
+      data: user.notificationSettings,
+    });
+  } catch (error) {
+    console.error("Update notification settings error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error updating notification settings",
+    });
+  }
+};
+
+/**
+ * Update appearance settings
+ * @route PUT /api/users/appearance
+ * @access Private
+ */
+const updateAppearanceSettings = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const appearanceSettings = req.body;
+
+    // Validate appearance settings
+    const validSettings = ["theme", "language", "timezone"];
+    const validThemes = ["light", "dark", "system"];
+    const validLanguages = ["en", "es", "fr", "de"];
+
+    const updates = {};
+
+    if (
+      appearanceSettings.theme &&
+      validThemes.includes(appearanceSettings.theme)
+    ) {
+      updates["appearanceSettings.theme"] = appearanceSettings.theme;
+    }
+
+    if (
+      appearanceSettings.language &&
+      validLanguages.includes(appearanceSettings.language)
+    ) {
+      updates["appearanceSettings.language"] = appearanceSettings.language;
+    }
+
+    if (appearanceSettings.timezone) {
+      updates["appearanceSettings.timezone"] = appearanceSettings.timezone;
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Appearance settings updated successfully",
+      data: user.appearanceSettings,
+    });
+  } catch (error) {
+    console.error("Update appearance settings error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error updating appearance settings",
+    });
+  }
+};
+
 module.exports = {
   getUserById,
   updateProfile,
@@ -847,4 +964,6 @@ module.exports = {
   respondToConnectionRequest,
   getConnections,
   removeConnection,
+  updateNotificationSettings,
+  updateAppearanceSettings,
 };
