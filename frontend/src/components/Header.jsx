@@ -13,8 +13,16 @@ function Header() {
 
   const [searchQuery, setSearchQuery] = useState("");
 
-  const handleLogout = () => {
-    dispatch(logout());
+  const handleLogout = async () => {
+    try {
+      await dispatch(logout());
+      // Navigate to login page after successful logout
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Still navigate to login even if there's an error
+      navigate("/login");
+    }
   };
 
   const handleSearch = (e) => {
