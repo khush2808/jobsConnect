@@ -55,8 +55,79 @@ export const logout = createAsyncThunk(
       await api.post("/auth/logout");
       return true;
     } catch (error) {
-      // Still clear local state even if server logout fails
+      // Still return success even if server logout fails
       return true;
+    }
+  }
+);
+
+export const updateUserProfile = createAsyncThunk(
+  "auth/updateUserProfile",
+  async (profileData, { rejectWithValue }) => {
+    try {
+      const response = await api.put("/users/profile", profileData);
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to update profile"
+      );
+    }
+  }
+);
+
+export const updateUserSkills = createAsyncThunk(
+  "auth/updateUserSkills",
+  async (skillsData, { rejectWithValue }) => {
+    try {
+      const response = await api.put("/users/skills", skillsData);
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to update skills"
+      );
+    }
+  }
+);
+
+export const changePassword = createAsyncThunk(
+  "auth/changePassword",
+  async (passwordData, { rejectWithValue }) => {
+    try {
+      const response = await api.put("/auth/change-password", passwordData);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to change password"
+      );
+    }
+  }
+);
+
+export const updateNotificationSettings = createAsyncThunk(
+  "auth/updateNotificationSettings",
+  async (notificationData, { rejectWithValue }) => {
+    try {
+      const response = await api.put("/users/notifications", notificationData);
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message ||
+          "Failed to update notification settings"
+      );
+    }
+  }
+);
+
+export const updateAppearanceSettings = createAsyncThunk(
+  "auth/updateAppearanceSettings",
+  async (appearanceData, { rejectWithValue }) => {
+    try {
+      const response = await api.put("/users/appearance", appearanceData);
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to update appearance settings"
+      );
     }
   }
 );
@@ -75,6 +146,11 @@ const authSlice = createSlice({
     },
     updateUser: (state, action) => {
       state.user = { ...state.user, ...action.payload };
+    },
+    clearAuth: (state) => {
+      state.user = null;
+      state.isAuthenticated = false;
+      state.error = null;
     },
   },
   extraReducers: (builder) => {
@@ -136,9 +212,83 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
         state.user = null;
         state.error = null;
+      })
+
+      // Update User Profile
+      .addCase(updateUserProfile.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(updateUserProfile.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = { ...state.user, ...action.payload };
+        state.error = null;
+      })
+      .addCase(updateUserProfile.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+
+      // Update User Skills
+      .addCase(updateUserSkills.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(updateUserSkills.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = { ...state.user, ...action.payload };
+        state.error = null;
+      })
+      .addCase(updateUserSkills.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+
+      // Change Password
+      .addCase(changePassword.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(changePassword.fulfilled, (state) => {
+        state.isLoading = false;
+        state.error = null;
+      })
+      .addCase(changePassword.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+
+      // Update Notification Settings
+      .addCase(updateNotificationSettings.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(updateNotificationSettings.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = { ...state.user, notificationSettings: action.payload };
+        state.error = null;
+      })
+      .addCase(updateNotificationSettings.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+
+      // Update Appearance Settings
+      .addCase(updateAppearanceSettings.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(updateAppearanceSettings.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = { ...state.user, appearanceSettings: action.payload };
+        state.error = null;
+      })
+      .addCase(updateAppearanceSettings.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
       });
   },
 });
 
-export const { clearError, updateUser } = authSlice.actions;
+export const { clearError, updateUser, clearAuth } = authSlice.actions;
 export default authSlice.reducer;
