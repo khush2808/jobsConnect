@@ -1,6 +1,11 @@
 import React, { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { updateUser } from "../store/authSlice";
+import {
+  updateUser,
+  changePassword,
+  updateNotificationSettings,
+  updateAppearanceSettings,
+} from "../store/authSlice";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import {
@@ -22,6 +27,7 @@ import {
   EyeOff,
   Trash2,
 } from "lucide-react";
+import fileUploadService from "../services/fileUploadService";
 
 function Settings() {
   const dispatch = useDispatch();
@@ -55,19 +61,19 @@ function Settings() {
 
   // Notification Settings
   const [notifications, setNotifications] = useState({
-    emailNotifications: true,
-    pushNotifications: true,
-    jobAlerts: true,
-    connectionRequests: true,
-    applicationUpdates: true,
-    marketingEmails: false,
+    emailNotifications: user?.notificationSettings?.emailNotifications ?? true,
+    pushNotifications: user?.notificationSettings?.pushNotifications ?? true,
+    jobAlerts: user?.notificationSettings?.jobAlerts ?? true,
+    connectionRequests: user?.notificationSettings?.connectionRequests ?? true,
+    applicationUpdates: user?.notificationSettings?.applicationUpdates ?? true,
+    marketingEmails: user?.notificationSettings?.marketingEmails ?? false,
   });
 
   // Appearance Settings
   const [appearance, setAppearance] = useState({
-    theme: "light",
-    language: "en",
-    timezone: "UTC",
+    theme: user?.appearanceSettings?.theme ?? "light",
+    language: user?.appearanceSettings?.language ?? "en",
+    timezone: user?.appearanceSettings?.timezone ?? "UTC",
   });
 
   const handleProfileUpdate = async () => {
@@ -101,11 +107,12 @@ function Settings() {
     setSuccess(null);
 
     try {
-      // TODO: Implement password change API call
-      // await api.put('/users/password', {
-      //   currentPassword: securityData.currentPassword,
-      //   newPassword: securityData.newPassword
-      // });
+      await dispatch(
+        changePassword({
+          currentPassword: securityData.currentPassword,
+          newPassword: securityData.newPassword,
+        })
+      );
       setSuccess("Password updated successfully!");
       setSecurityData({
         currentPassword: "",
@@ -127,8 +134,7 @@ function Settings() {
     setSuccess(null);
 
     try {
-      // TODO: Implement notification settings API call
-      // await api.put('/users/notifications', notifications);
+      await dispatch(updateNotificationSettings(notifications));
       setSuccess("Notification settings updated successfully!");
     } catch (error) {
       setError("Failed to update notification settings.");
@@ -143,8 +149,7 @@ function Settings() {
     setSuccess(null);
 
     try {
-      // TODO: Implement appearance settings API call
-      // await api.put('/users/appearance', appearance);
+      await dispatch(updateAppearanceSettings(appearance));
       setSuccess("Appearance settings updated successfully!");
     } catch (error) {
       setError("Failed to update appearance settings.");
@@ -157,21 +162,34 @@ function Settings() {
     const file = event.target.files[0];
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append(type, file);
-
     setIsLoading(true);
     setError(null);
     setSuccess(null);
 
     try {
-      // TODO: Implement file upload API call
-      // const response = await api.post(`/users/${type}`, formData);
-      setSuccess(
-        `${
-          type === "profile-picture" ? "Profile picture" : "Resume"
-        } updated successfully!`
-      );
+      let response;
+      if (type === "profile-picture") {
+        response = await fileUploadService.uploadProfilePicture(file);
+      } else if (type === "resume") {
+        response = await fileUploadService.uploadResume(file);
+      } else {
+        throw new Error("Invalid file type");
+      }
+
+      // Update user profile with new file URL
+      if (response.success) {
+        await dispatch(
+          updateUser({
+            [type === "profile-picture" ? "profilePicture" : "resume"]:
+              response.data,
+          })
+        );
+        setSuccess(
+          `${
+            type === "profile-picture" ? "Profile picture" : "Resume"
+          } updated successfully!`
+        );
+      }
     } catch (error) {
       setError(`Failed to upload ${type}. Please try again.`);
     } finally {
@@ -271,6 +289,37 @@ function Settings() {
                           onChange={(e) =>
                             handleFileUpload(e, "profile-picture")
                           }
+                          className="hidden"
+                        />
+                        <Button variant="outline" size="sm">
+                          <Upload className="h-4 w-4 mr-2" />
+                          Upload
+                        </Button>
+                      </label>
+                      <Button variant="outline" size="sm">
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Resume Upload */}
+                <div className="flex items-center space-x-4">
+                  <div className="w-20 h-20 bg-secondary rounded-full flex items-center justify-center">
+                    <Upload className="h-8 w-8 text-secondary-foreground" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Resume</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Upload your resume (PDF format)
+                    </p>
+                    <div className="flex space-x-2 mt-2">
+                      <label className="cursor-pointer">
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          onChange={(e) => handleFileUpload(e, "resume")}
                           className="hidden"
                         />
                         <Button variant="outline" size="sm">
