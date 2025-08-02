@@ -16,12 +16,12 @@ const { validate, profileUpdateSchema } = require("../middleware/validation");
 
 const router = express.Router();
 
-// Public/optional auth routes
-router.get("/search", protect, searchUsers);
-router.get("/:id", optionalAuth, getUserById);
-
 // Protected routes
 router.use(protect); // All routes below require authentication
+
+// Specific routes must come before parameter routes
+router.get("/search", searchUsers);
+router.get("/connections", getConnections);
 
 // Profile management
 router.put("/profile", validate(profileUpdateSchema), updateProfile);
@@ -29,9 +29,11 @@ router.post("/profile-picture", uploadProfilePicture);
 router.delete("/profile-picture", removeProfilePicture);
 router.put("/skills", updateSkills);
 
+// Public/optional auth routes
+router.get("/:id", optionalAuth, getUserById);
+
 // Connections
 router.post("/:id/connect", sendConnectionRequest);
-router.get("/connections", getConnections);
 router.put("/connections/:id", respondToConnectionRequest);
 router.delete("/connections/:id", removeConnection);
 

@@ -21,16 +21,18 @@ const {
 
 const router = express.Router();
 
-// Public/optional auth routes
-router.get("/:id", optionalAuth, getPostById);
-
 // Protected routes
 router.use(protect); // All routes below require authentication
 
-// Post management
-router.post("/", validate(postCreateSchema), createPost);
+// Specific routes must come before parameter routes
 router.get("/feed", getFeed);
 router.get("/my/posts", getMyPosts);
+
+// Public/optional auth routes
+router.get("/:id", optionalAuth, getPostById);
+
+// Post management
+router.post("/", validate(postCreateSchema), createPost);
 
 // Post interactions
 router.post("/:id/like", toggleLike);

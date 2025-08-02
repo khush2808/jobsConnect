@@ -106,7 +106,9 @@ const extractSkillsFromText = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Skills extracted successfully",
-      skills: extractedSkills,
+      data: {
+        skills: extractedSkills,
+      },
     });
   } catch (error) {
     console.error("Extract skills from text error:", error);
@@ -235,7 +237,9 @@ const getJobRecommendations = async (req, res) => {
       return res.status(200).json({
         success: true,
         message: "No jobs available for recommendations",
-        recommendations: [],
+        data: {
+          recommendations: [],
+        },
       });
     }
 
@@ -250,8 +254,10 @@ const getJobRecommendations = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      recommendations: limitedRecommendations,
-      total: recommendations.length,
+      data: {
+        recommendations: limitedRecommendations,
+        total: recommendations.length,
+      },
     });
   } catch (error) {
     console.error("Get job recommendations error:", error);

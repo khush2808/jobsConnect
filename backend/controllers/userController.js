@@ -108,7 +108,7 @@ const updateProfile = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Profile updated successfully",
-      user,
+      data: user,
     });
   } catch (error) {
     console.error("Update profile error:", error);
@@ -263,7 +263,9 @@ const updateSkills = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Skills updated successfully",
-      skills: user.skills,
+      data: {
+        skills: user.skills,
+      },
     });
   } catch (error) {
     console.error("Update skills error:", error);
@@ -345,7 +347,7 @@ const searchUsers = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      users,
+      data: users,
       pagination: {
         current: parseInt(page),
         pages: Math.ceil(total / parseInt(limit)),
@@ -518,7 +520,7 @@ const getConnections = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      connections,
+      data: connections,
     });
   } catch (error) {
     console.error("Get connections error:", error);
