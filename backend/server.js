@@ -108,12 +108,13 @@ process.on("SIGINT", () => {
 });
 
 // Only start server if not in test mode or if directly executed
+let server;
 if (process.env.NODE_ENV !== "test" && require.main === module) {
-  app.listen(PORT, () => {
+  server = app.listen(PORT, () => {
     console.log(
       `Server running on port ${PORT} in ${process.env.NODE_ENV} mode`
     );
   });
 }
 
-module.exports = app;
+module.exports = { app, server };
