@@ -1,28 +1,26 @@
 import React, { useEffect } from "react";
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-} from "react-router-dom";
-import { Provider, useDispatch, useSelector } from "react-redux";
-import { store } from "./store";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import { initAuth } from "./store/authSlice";
+import { ThemeProvider } from "./contexts/ThemeContext";
 
 // Layout Components
 import Layout from "./components/Layout";
 import AuthLayout from "./components/AuthLayout";
 
-// Page Components
+// Pages
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Jobs from "./pages/Jobs";
 import JobDetail from "./pages/JobDetail";
+import JobPost from "./pages/JobPost";
+import Applications from "./pages/Applications";
 import Feed from "./pages/Feed";
 import Profile from "./pages/Profile";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
+import Connections from "./pages/Connections";
+import Settings from "./pages/Settings";
 
-// Protected Route Component
 function ProtectedRoute({ children }) {
   const { isAuthenticated, isLoading } = useSelector((state) => state.auth);
 
@@ -40,7 +38,6 @@ function ProtectedRoute({ children }) {
   return isAuthenticated ? children : <Navigate to="/login" />;
 }
 
-// App Content Component
 function AppContent() {
   const dispatch = useDispatch();
   const { isAuthenticated } = useSelector((state) => state.auth);
@@ -49,12 +46,12 @@ function AppContent() {
     console.log("🚀 App: useEffect triggered, dispatching initAuth");
     dispatch(initAuth());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Remove dispatch from dependency array as it's stable
+  }, []);
 
   return (
-    <Router>
+    <BrowserRouter>
       <Routes>
-        {/* Public routes */}
+        {/* Public Routes */}
         <Route
           path="/login"
           element={
@@ -80,36 +77,118 @@ function AppContent() {
           }
         />
 
-        {/* Protected routes */}
+        {/* Protected Routes */}
         <Route
           path="/"
           element={
             <ProtectedRoute>
-              <Layout />
+              <Navigate to="/dashboard" />
             </ProtectedRoute>
           }
-        >
-          <Route index element={<Navigate to="/dashboard" />} />
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="jobs" element={<Jobs />} />
-          <Route path="jobs/:id" element={<JobDetail />} />
-          <Route path="feed" element={<Feed />} />
-          <Route path="profile" element={<Profile />} />
-        </Route>
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Dashboard />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/jobs"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Jobs />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/jobs/:id"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <JobDetail />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/jobs/post"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <JobPost />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/jobs/applications"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Applications />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/feed"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Feed />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Profile />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/connections"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Connections />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Settings />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
 
-        {/* Catch all redirect */}
-        <Route path="*" element={<Navigate to="/" />} />
+        {/* Catch all route */}
+        <Route path="*" element={<Navigate to="/dashboard" />} />
       </Routes>
-    </Router>
+    </BrowserRouter>
   );
 }
 
-// Main App Component with Redux Provider
 function App() {
   return (
-    <Provider store={store}>
+    <ThemeProvider>
       <AppContent />
-    </Provider>
+    </ThemeProvider>
   );
 }
 
