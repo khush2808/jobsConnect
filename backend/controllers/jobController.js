@@ -220,7 +220,7 @@ const getJobById = async (req, res) => {
 const applyToJob = async (req, res) => {
   try {
     const { id } = req.params;
-    const { coverLetter, resumeUrl } = req.body;
+    const { coverLetter, resumeUrl, expectedSalary } = req.body;
     const applicantId = req.user._id;
 
     const job = await Job.findById(id);
@@ -256,6 +256,7 @@ const applyToJob = async (req, res) => {
       applicant: applicantId,
       coverLetter,
       resumeUrl,
+      expectedSalary,
       appliedAt: new Date(),
       status: "pending",
     });
@@ -268,7 +269,7 @@ const applyToJob = async (req, res) => {
       "firstName lastName profilePicture skills"
     );
 
-    res.status(200).json({
+    res.status(201).json({
       success: true,
       message: "Application submitted successfully",
       data: job.applications[job.applications.length - 1],
