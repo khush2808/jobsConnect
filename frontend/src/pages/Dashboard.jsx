@@ -23,7 +23,7 @@ import {
 function Dashboard() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { user } = useSelector((state) => state.auth);
+  const { user, isAuthenticated } = useSelector((state) => state.auth);
   const { myApplications, myJobs } = useSelector((state) => state.jobs);
 
   const [stats, setStats] = useState({
@@ -35,13 +35,13 @@ function Dashboard() {
 
   useEffect(() => {
     // Fetch user's applications and posted jobs
-    if (user) {
+    if (isAuthenticated && user) {
       dispatch(fetchMyApplications());
       if (user.accountType === "employer") {
         dispatch(fetchMyJobs());
       }
     }
-  }, [dispatch, user]);
+  }, [dispatch, isAuthenticated, user]);
 
   useEffect(() => {
     // Calculate stats from real data
@@ -103,7 +103,9 @@ function Dashboard() {
     <div className="space-y-6">
       {/* Welcome Section */}
       <div>
-        <h1 className="text-3xl font-bold">Welcome back, {user?.firstName}!</h1>
+        <h1 className="text-3xl font-bold">
+          Welcome back, {user?.firstName || "User"}!
+        </h1>
         <p className="text-muted-foreground mt-2">
           Here's what's happening in your professional world today.
         </p>

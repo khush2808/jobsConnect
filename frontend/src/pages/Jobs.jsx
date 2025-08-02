@@ -18,13 +18,16 @@ function Jobs() {
   const { jobs, isLoading, filters, pagination, error } = useSelector(
     (state) => state.jobs
   );
+  const { isAuthenticated } = useSelector((state) => state.auth);
 
   const [searchTerm, setSearchTerm] = useState(filters.search);
 
   // Fetch jobs on component mount
   useEffect(() => {
-    dispatch(fetchJobs(filters));
-  }, [dispatch, filters]);
+    if (isAuthenticated) {
+      dispatch(fetchJobs(filters));
+    }
+  }, [dispatch, filters, isAuthenticated]);
 
   const handleSearch = (e) => {
     e.preventDefault();
