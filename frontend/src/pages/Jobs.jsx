@@ -46,8 +46,22 @@ function Jobs() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold">Find Jobs</h1>
+            <p className="text-muted-foreground mt-2">
+              Discover opportunities that match your skills and interests
+            </p>
+          </div>
+          <Button onClick={() => navigate("/jobs/post")}>Post a Job</Button>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading jobs...</p>
+          </div>
+        </div>
       </div>
     );
   }

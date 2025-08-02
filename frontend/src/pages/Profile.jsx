@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { updateUser } from "../store/authSlice";
+import { updateUserProfile } from "../store/authSlice";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import {
@@ -28,6 +28,7 @@ function Profile() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
@@ -74,18 +75,18 @@ function Profile() {
   }, [user]);
 
   const handleProfileUpdate = async () => {
-    setIsLoading(true);
+    setIsUpdating(true);
     setError(null);
     setSuccess(null);
 
     try {
-      await dispatch(updateUser(profileData));
+      await dispatch(updateUserProfile(profileData));
       setSuccess("Profile updated successfully!");
       setIsEditing(false);
     } catch (error) {
-      setError("Failed to update profile. Please try again.");
+      setError(error.message || "Failed to update profile. Please try again.");
     } finally {
-      setIsLoading(false);
+      setIsUpdating(false);
     }
   };
 
@@ -525,10 +526,10 @@ function Profile() {
                 <Button
                   onClick={handleProfileUpdate}
                   className="w-full"
-                  disabled={isLoading}
+                  disabled={isUpdating}
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  {isLoading ? "Saving..." : "Save Changes"}
+                  {isUpdating ? "Saving..." : "Save Changes"}
                 </Button>
               </CardContent>
             </Card>

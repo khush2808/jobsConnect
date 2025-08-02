@@ -137,6 +137,16 @@ function AppContent() {
           }
         />
         <Route
+          path="/applications"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Applications />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/feed"
           element={
             <ProtectedRoute>

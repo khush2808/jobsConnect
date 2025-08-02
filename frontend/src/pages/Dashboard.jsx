@@ -35,11 +35,13 @@ function Dashboard() {
 
   useEffect(() => {
     // Fetch user's applications and posted jobs
-    dispatch(fetchMyApplications());
-    if (user?.accountType === "employer") {
-      dispatch(fetchMyJobs());
+    if (user) {
+      dispatch(fetchMyApplications());
+      if (user.accountType === "employer") {
+        dispatch(fetchMyJobs());
+      }
     }
-  }, [dispatch, user?.accountType]);
+  }, [dispatch, user]);
 
   useEffect(() => {
     // Calculate stats from real data

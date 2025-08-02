@@ -39,6 +39,7 @@ function Feed() {
       setNewPostContent("");
     } catch (error) {
       console.error("Failed to create post:", error);
+      alert("Failed to create post. Please try again.");
     }
   };
 
@@ -90,7 +91,7 @@ function Feed() {
             Stay updated with your professional network
           </p>
         </div>
-        <Button onClick={() => setNewPostContent("What's on your mind?")}>
+        <Button onClick={() => setNewPostContent("")}>
           <Plus className="h-4 w-4 mr-2" />
           Create Post
         </Button>

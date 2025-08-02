@@ -31,6 +31,7 @@ function JobDetail() {
   const { user } = useSelector((state) => state.auth);
 
   const [showApplication, setShowApplication] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [applicationData, setApplicationData] = useState({
     coverLetter: "",
     expectedSalary: "",
@@ -46,6 +47,7 @@ function JobDetail() {
     e.preventDefault();
     if (!applicationData.coverLetter.trim()) return;
 
+    setIsSubmitting(true);
     try {
       await dispatch(
         applyToJob({
@@ -60,9 +62,13 @@ function JobDetail() {
       );
       setShowApplication(false);
       setApplicationData({ coverLetter: "", expectedSalary: "" });
-      // Show success message or redirect
+      // Show success message
+      alert("Application submitted successfully!");
     } catch (error) {
       console.error("Failed to apply:", error);
+      alert("Failed to submit application. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -355,9 +361,11 @@ function JobDetail() {
                     <Button
                       type="submit"
                       className="flex-1"
-                      disabled={!applicationData.coverLetter.trim()}
+                      disabled={
+                        !applicationData.coverLetter.trim() || isSubmitting
+                      }
                     >
-                      Submit Application
+                      {isSubmitting ? "Submitting..." : "Submit Application"}
                     </Button>
                     <Button
                       type="button"

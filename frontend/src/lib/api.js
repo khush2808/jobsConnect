@@ -16,12 +16,24 @@ const api = axios.create({
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    console.error("API Error:", error);
+
     if (error.response?.status === 401) {
       // Only redirect if not already on login page to prevent loops
       if (window.location.pathname !== "/login") {
         window.location.href = "/login";
       }
     }
+
+    // Add better error messages
+    if (error.response?.status === 500) {
+      error.message = "Server error. Please try again later.";
+    } else if (error.response?.status === 404) {
+      error.message = "Resource not found.";
+    } else if (!error.response) {
+      error.message = "Network error. Please check your connection.";
+    }
+
     return Promise.reject(error);
   }
 );
