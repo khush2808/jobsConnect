@@ -26,7 +26,7 @@ and help create a better user-centric product**.
 ● Create/edit profile with:
 ○ Name, bio, LinkedIn URL
 ○ Manual or AI-extracted **skills**
-○ Profile picture
+○ Profile picture - use cloudinary for image storage
 
 
 **Module 2: Job Posting + Feed**
@@ -36,11 +36,14 @@ and help create a better user-centric product**.
 ○ Filter by skill, location, and roles.
 ● Store data in the backend securely
 
-**Module 3: AI Enhancements** **_(Pick any or all)_**
+**Module 3: AI Enhancements** ****
 **Feature Description**
 
 Resume Skill Extraction
 Parse the uploaded resume or bio to auto-fill the top skills
 Smart Suggestions Recommended jobs or connections based on profile
+
+ensure that the ui/ux is good and that the app works as expected.
+ensure to use best code practices and security and design patterns.
 
 
