@@ -12,6 +12,7 @@ import {
   CardContent,
   CardFooter,
 } from "../components/ui/Card";
+import { Eye, EyeOff } from "lucide-react";
 
 function Register() {
   const dispatch = useDispatch();
@@ -27,25 +28,58 @@ function Register() {
     accountType: "job_seeker",
   });
 
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     if (error) dispatch(clearError());
+
+    // Clear validation errors when user types
     if (validationErrors[e.target.name]) {
-      setValidationErrors({ ...validationErrors, [e.target.name]: "" });
+      setValidationErrors({
+        ...validationErrors,
+        [e.target.name]: null,
+      });
     }
   };
 
   const validateForm = () => {
     const errors = {};
 
-    if (formData.password !== formData.confirmPassword) {
+    if (!formData.firstName.trim()) {
+      errors.firstName = "First name is required";
+    } else if (formData.firstName.length < 2) {
+      errors.firstName = "First name must be at least 2 characters";
+    }
+
+    if (!formData.lastName.trim()) {
+      errors.lastName = "Last name is required";
+    } else if (formData.lastName.length < 2) {
+      errors.lastName = "Last name must be at least 2 characters";
+    }
+
+    if (!formData.email.trim()) {
+      errors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = "Please enter a valid email address";
+    }
+
+    if (!formData.password) {
+      errors.password = "Password is required";
+    } else if (formData.password.length < 6) {
+      errors.password = "Password must be at least 6 characters";
+    }
+
+    if (!formData.confirmPassword) {
+      errors.confirmPassword = "Please confirm your password";
+    } else if (formData.password !== formData.confirmPassword) {
       errors.confirmPassword = "Passwords do not match";
     }
 
-    if (formData.password.length < 6) {
-      errors.password = "Password must be at least 6 characters";
+    if (!formData.accountType) {
+      errors.accountType = "Please select an account type";
     }
 
     setValidationErrors(errors);
@@ -55,10 +89,19 @@ function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      return;
+    }
 
-    const { confirmPassword, ...registerData } = formData;
-    const result = await dispatch(register(registerData));
+    const result = await dispatch(
+      register({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+        accountType: formData.accountType,
+      })
+    );
 
     if (result.type === "auth/register/fulfilled") {
       navigate("/dashboard");
@@ -70,7 +113,7 @@ function Register() {
       <CardHeader>
         <CardTitle>Create your account</CardTitle>
         <CardDescription>
-          Join JobConnect to find your next opportunity
+          Join JobConnect to find your next opportunity or hire great talent
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
@@ -81,67 +124,97 @@ function Register() {
             </div>
           )}
 
+          {/* Name Fields */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">First Name</label>
               <Input
                 type="text"
                 name="firstName"
-                placeholder="John"
+                placeholder="Enter your first name"
                 value={formData.firstName}
                 onChange={handleChange}
+                className={
+                  validationErrors.firstName ? "border-destructive" : ""
+                }
                 required
               />
+              {validationErrors.firstName && (
+                <p className="text-sm text-destructive">
+                  {validationErrors.firstName}
+                </p>
+              )}
             </div>
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Last Name</label>
               <Input
                 type="text"
                 name="lastName"
-                placeholder="Doe"
+                placeholder="Enter your last name"
                 value={formData.lastName}
                 onChange={handleChange}
+                className={
+                  validationErrors.lastName ? "border-destructive" : ""
+                }
                 required
               />
+              {validationErrors.lastName && (
+                <p className="text-sm text-destructive">
+                  {validationErrors.lastName}
+                </p>
+              )}
             </div>
           </div>
 
+          {/* Email */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Email</label>
             <Input
               type="email"
               name="email"
-              placeholder="john@example.com"
+              placeholder="Enter your email"
               value={formData.email}
               onChange={handleChange}
+              className={validationErrors.email ? "border-destructive" : ""}
               required
             />
+            {validationErrors.email && (
+              <p className="text-sm text-destructive">
+                {validationErrors.email}
+              </p>
+            )}
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Account Type</label>
-            <select
-              name="accountType"
-              value={formData.accountType}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="job_seeker">Job Seeker</option>
-              <option value="employer">Employer</option>
-              <option value="both">Both</option>
-            </select>
-          </div>
-
+          {/* Password */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Password</label>
-            <Input
-              type="password"
-              name="password"
-              placeholder="Enter your password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-            />
+            <div className="relative">
+              <Input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                placeholder="Create a password"
+                value={formData.password}
+                onChange={handleChange}
+                className={
+                  validationErrors.password
+                    ? "border-destructive pr-10"
+                    : "pr-10"
+                }
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
             {validationErrors.password && (
               <p className="text-sm text-destructive">
                 {validationErrors.password}
@@ -149,21 +222,69 @@ function Register() {
             )}
           </div>
 
+          {/* Confirm Password */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Confirm Password</label>
-            <Input
-              type="password"
-              name="confirmPassword"
-              placeholder="Confirm your password"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              required
-            />
+            <div className="relative">
+              <Input
+                type={showConfirmPassword ? "text" : "password"}
+                name="confirmPassword"
+                placeholder="Confirm your password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                className={
+                  validationErrors.confirmPassword
+                    ? "border-destructive pr-10"
+                    : "pr-10"
+                }
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showConfirmPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
             {validationErrors.confirmPassword && (
               <p className="text-sm text-destructive">
                 {validationErrors.confirmPassword}
               </p>
             )}
+          </div>
+
+          {/* Account Type */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Account Type</label>
+            <select
+              name="accountType"
+              value={formData.accountType}
+              onChange={handleChange}
+              className={`w-full px-3 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring ${
+                validationErrors.accountType
+                  ? "border-destructive"
+                  : "border-input"
+              }`}
+              required
+            >
+              <option value="job_seeker">Job Seeker</option>
+              <option value="employer">Employer</option>
+            </select>
+            {validationErrors.accountType && (
+              <p className="text-sm text-destructive">
+                {validationErrors.accountType}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              {formData.accountType === "job_seeker"
+                ? "Find and apply to job opportunities"
+                : "Post jobs and hire talented professionals"}
+            </p>
           </div>
         </CardContent>
 

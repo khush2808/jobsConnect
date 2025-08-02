@@ -1,9 +1,86 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  fetchFeed,
+  toggleLike,
+  addComment,
+  createPost,
+} from "../store/postsSlice";
 import { Card, CardContent } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
-import { MessageSquare, Heart, Share, Plus } from "lucide-react";
+import { Input } from "../components/ui/Input";
+import { MessageSquare, Heart, Share, Plus, Send } from "lucide-react";
 
 function Feed() {
+  const dispatch = useDispatch();
+  const { feed, isLoading, error } = useSelector((state) => state.posts);
+  const { user } = useSelector((state) => state.auth);
+
+  const [newPostContent, setNewPostContent] = useState("");
+  const [commentContent, setCommentContent] = useState("");
+  const [activeCommentPost, setActiveCommentPost] = useState(null);
+
+  useEffect(() => {
+    dispatch(fetchFeed());
+  }, [dispatch]);
+
+  const handleCreatePost = async () => {
+    if (!newPostContent.trim()) return;
+
+    try {
+      await dispatch(
+        createPost({
+          content: newPostContent,
+          type: "text",
+          category: "Career",
+          visibility: "public",
+        })
+      );
+      setNewPostContent("");
+    } catch (error) {
+      console.error("Failed to create post:", error);
+    }
+  };
+
+  const handleLike = async (postId) => {
+    try {
+      await dispatch(toggleLike(postId));
+    } catch (error) {
+      console.error("Failed to like post:", error);
+    }
+  };
+
+  const handleComment = async (postId) => {
+    if (!commentContent.trim()) return;
+
+    try {
+      await dispatch(addComment({ postId, content: commentContent }));
+      setCommentContent("");
+      setActiveCommentPost(null);
+    } catch (error) {
+      console.error("Failed to add comment:", error);
+    }
+  };
+
+  const formatTimeAgo = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+
+    if (diffInMinutes < 1) return "Just now";
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+    return `${Math.floor(diffInMinutes / 1440)}d ago`;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -13,73 +90,171 @@ function Feed() {
             Stay updated with your professional network
           </p>
         </div>
-        <Button>
+        <Button onClick={() => setNewPostContent("What's on your mind?")}>
           <Plus className="h-4 w-4 mr-2" />
           Create Post
         </Button>
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center text-destructive">
+              <p className="font-medium">Error loading feed</p>
+              <p className="text-sm">{error}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Create Post Card */}
       <Card>
         <CardContent className="p-6">
           <div className="flex items-center space-x-4">
             <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
-              <span className="text-primary-foreground font-medium">U</span>
+              <span className="text-primary-foreground font-medium">
+                {user?.firstName?.charAt(0) || "U"}
+              </span>
             </div>
             <div className="flex-1">
-              <button className="w-full text-left px-4 py-3 bg-secondary rounded-full text-muted-foreground hover:bg-secondary/80 transition-colors">
-                What's on your mind?
-              </button>
+              <textarea
+                value={newPostContent}
+                onChange={(e) => setNewPostContent(e.target.value)}
+                placeholder="What's on your mind?"
+                className="w-full px-4 py-3 bg-secondary rounded-lg text-muted-foreground hover:bg-secondary/80 transition-colors resize-none"
+                rows={3}
+              />
             </div>
           </div>
+          {newPostContent && (
+            <div className="flex justify-end mt-4">
+              <Button
+                onClick={handleCreatePost}
+                disabled={!newPostContent.trim()}
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Post
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Sample Posts */}
-      {[1, 2, 3].map((post) => (
-        <Card key={post}>
-          <CardContent className="p-6">
-            <div className="flex items-start space-x-4">
-              <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
-                <span className="text-primary-foreground font-medium">J</span>
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center space-x-2">
-                  <h4 className="font-medium">John Doe</h4>
-                  <span className="text-muted-foreground text-sm">• 2h</span>
-                </div>
-                <p className="text-muted-foreground text-sm">
-                  Software Engineer at TechCorp
-                </p>
-
-                <div className="mt-3">
-                  <p>
-                    Just completed an amazing project using React and Node.js!
-                    The team's collaboration was outstanding, and I learned so
-                    much about scalable architecture. Grateful for the
-                    opportunity to work with such talented individuals. 🚀
-                  </p>
-                </div>
-
-                <div className="flex items-center space-x-6 mt-4 pt-3 border-t">
-                  <button className="flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors">
-                    <Heart className="h-4 w-4" />
-                    <span className="text-sm">12</span>
-                  </button>
-                  <button className="flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors">
-                    <MessageSquare className="h-4 w-4" />
-                    <span className="text-sm">5</span>
-                  </button>
-                  <button className="flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors">
-                    <Share className="h-4 w-4" />
-                    <span className="text-sm">2</span>
-                  </button>
-                </div>
-              </div>
-            </div>
+      {/* Posts Feed */}
+      {feed.length === 0 && !isLoading ? (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <MessageSquare className="mx-auto h-12 w-12 text-muted-foreground" />
+            <h3 className="mt-4 text-lg font-medium">No posts yet</h3>
+            <p className="text-muted-foreground">
+              Be the first to share something with your network
+            </p>
           </CardContent>
         </Card>
-      ))}
+      ) : (
+        <div className="space-y-4">
+          {feed.map((post) => (
+            <Card key={post._id}>
+              <CardContent className="p-6">
+                <div className="flex items-start space-x-4">
+                  <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+                    <span className="text-primary-foreground font-medium">
+                      {post.author?.firstName?.charAt(0) || "U"}
+                    </span>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2">
+                      <h4 className="font-medium">
+                        {post.author?.firstName} {post.author?.lastName}
+                      </h4>
+                      <span className="text-muted-foreground text-sm">
+                        • {formatTimeAgo(post.createdAt)}
+                      </span>
+                    </div>
+                    <p className="text-muted-foreground text-sm">
+                      {post.author?.jobTitle || "Professional"}
+                    </p>
+
+                    <div className="mt-3">
+                      <p className="whitespace-pre-wrap">{post.content}</p>
+                    </div>
+
+                    {/* Tags */}
+                    {post.tags && post.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {post.tags.map((tag, index) => (
+                          <span
+                            key={index}
+                            className="px-2 py-1 text-xs bg-secondary text-secondary-foreground rounded"
+                          >
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Engagement Stats */}
+                    <div className="flex items-center space-x-6 mt-4 pt-3 border-t">
+                      <button
+                        className={`flex items-center space-x-2 transition-colors ${
+                          post.isLiked
+                            ? "text-primary"
+                            : "text-muted-foreground hover:text-primary"
+                        }`}
+                        onClick={() => handleLike(post._id)}
+                      >
+                        <Heart
+                          className={`h-4 w-4 ${
+                            post.isLiked ? "fill-current" : ""
+                          }`}
+                        />
+                        <span className="text-sm">{post.likesCount || 0}</span>
+                      </button>
+                      <button
+                        className="flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors"
+                        onClick={() =>
+                          setActiveCommentPost(
+                            activeCommentPost === post._id ? null : post._id
+                          )
+                        }
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                        <span className="text-sm">
+                          {post.commentsCount || 0}
+                        </span>
+                      </button>
+                      <button className="flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors">
+                        <Share className="h-4 w-4" />
+                        <span className="text-sm">{post.sharesCount || 0}</span>
+                      </button>
+                    </div>
+
+                    {/* Comment Input */}
+                    {activeCommentPost === post._id && (
+                      <div className="mt-4 flex space-x-2">
+                        <Input
+                          value={commentContent}
+                          onChange={(e) => setCommentContent(e.target.value)}
+                          placeholder="Write a comment..."
+                          className="flex-1"
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => handleComment(post._id)}
+                          disabled={!commentContent.trim()}
+                        >
+                          Comment
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

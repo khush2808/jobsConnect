@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { fetchJobs, setFilters, clearFilters } from "../store/jobsSlice";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -13,12 +14,14 @@ import { Search, MapPin, Briefcase, Clock, DollarSign } from "lucide-react";
 
 function Jobs() {
   const dispatch = useDispatch();
-  const { jobs, isLoading, filters, pagination } = useSelector(
+  const navigate = useNavigate();
+  const { jobs, isLoading, filters, pagination, error } = useSelector(
     (state) => state.jobs
   );
 
   const [searchTerm, setSearchTerm] = useState(filters.search);
 
+  // Fetch jobs on component mount
   useEffect(() => {
     dispatch(fetchJobs(filters));
   }, [dispatch, filters]);
@@ -35,6 +38,10 @@ function Jobs() {
   const handleClearFilters = () => {
     setSearchTerm("");
     dispatch(clearFilters());
+  };
+
+  const handleViewJob = (jobId) => {
+    navigate(`/jobs/${jobId}`);
   };
 
   if (isLoading) {
@@ -55,7 +62,7 @@ function Jobs() {
             Discover opportunities that match your skills and interests
           </p>
         </div>
-        <Button>Post a Job</Button>
+        <Button onClick={() => navigate("/jobs/post")}>Post a Job</Button>
       </div>
 
       {/* Search and Filters */}
@@ -127,6 +134,18 @@ function Jobs() {
         </CardContent>
       </Card>
 
+      {/* Error Display */}
+      {error && (
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center text-destructive">
+              <p className="font-medium">Error loading jobs</p>
+              <p className="text-sm">{error}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Results */}
       <div className="space-y-4">
         <div className="flex justify-between items-center">
@@ -135,7 +154,7 @@ function Jobs() {
           </p>
         </div>
 
-        {jobs.length === 0 ? (
+        {jobs.length === 0 && !isLoading && !error ? (
           <Card>
             <CardContent className="p-12 text-center">
               <Briefcase className="mx-auto h-12 w-12 text-muted-foreground" />
@@ -151,6 +170,7 @@ function Jobs() {
               <Card
                 key={job._id}
                 className="hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => handleViewJob(job._id)}
               >
                 <CardContent className="p-6">
                   <div className="flex justify-between items-start">
@@ -163,7 +183,8 @@ function Jobs() {
                       </div>
 
                       <p className="text-muted-foreground mt-1">
-                        {job.company?.name}
+                        {job.company?.name || job.employer?.firstName}{" "}
+                        {job.employer?.lastName}
                       </p>
 
                       <div className="flex items-center space-x-4 mt-3 text-sm text-muted-foreground">
