@@ -14,6 +14,8 @@ const {
   respondToConnectionRequest,
   getConnections,
   removeConnection,
+  updateNotificationSettings,
+  updateAppearanceSettings,
 } = require("../controllers/userController");
 const { protect, optionalAuth } = require("../middleware/auth");
 const { validate, profileUpdateSchema } = require("../middleware/validation");
@@ -36,6 +38,10 @@ router.delete("/resume", removeResume);
 router.get("/resume", getResume);
 router.post("/company-logo", uploadCompanyLogo);
 router.put("/skills", updateSkills);
+
+// Settings management
+router.put("/notifications", updateNotificationSettings);
+router.put("/appearance", updateAppearanceSettings);
 
 // Public/optional auth routes
 router.get("/:id", optionalAuth, getUserById);
