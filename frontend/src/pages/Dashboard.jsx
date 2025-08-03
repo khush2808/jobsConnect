@@ -65,7 +65,9 @@ function Dashboard() {
         user.resume,
       ];
       const completedFields = profileFields.filter(Boolean).length;
-      const profileCompletion = Math.round((completedFields / profileFields.length) * 100);
+      const profileCompletion = Math.round(
+        (completedFields / profileFields.length) * 100
+      );
 
       setStats({
         totalJobs: jobs.length,
@@ -83,10 +85,12 @@ function Dashboard() {
 
     // Generate recommended jobs based on user skills
     if (user?.skills && jobs.length > 0) {
-      const userSkills = user.skills.map(skill => skill.name.toLowerCase());
+      const userSkills = (user.skills || []).map((skill) =>
+        skill.name.toLowerCase()
+      );
       const recommended = jobs
-        .filter(job => 
-          job.skills?.some(skill => 
+        .filter((job) =>
+          job.skills?.some((skill) =>
             userSkills.includes(skill.name.toLowerCase())
           )
         )
@@ -200,7 +204,11 @@ function Dashboard() {
                 <p className="text-sm font-medium text-muted-foreground">
                   Profile Completion
                 </p>
-                <p className={`text-2xl font-bold ${getProfileCompletionColor(stats.profileCompletion)}`}>
+                <p
+                  className={`text-2xl font-bold ${getProfileCompletionColor(
+                    stats.profileCompletion
+                  )}`}
+                >
                   {stats.profileCompletion}%
                 </p>
               </div>
@@ -227,12 +235,15 @@ function Dashboard() {
             {recommendedJobs.length === 0 ? (
               <div className="text-center py-8">
                 <Briefcase className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-medium">No recommendations yet</h3>
+                <h3 className="mt-4 text-lg font-medium">
+                  No recommendations yet
+                </h3>
                 <p className="text-muted-foreground">
-                  Add more skills to your profile to get personalized job recommendations
+                  Add more skills to your profile to get personalized job
+                  recommendations
                 </p>
-                <Button 
-                  className="mt-4" 
+                <Button
+                  className="mt-4"
                   variant="outline"
                   onClick={() => navigate("/profile")}
                 >
@@ -276,8 +287,8 @@ function Dashboard() {
                     </div>
                   </div>
                 ))}
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="w-full"
                   onClick={() => navigate("/jobs")}
                 >
@@ -292,9 +303,7 @@ function Dashboard() {
         <Card>
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>
-              Latest posts from your network
-            </CardDescription>
+            <CardDescription>Latest posts from your network</CardDescription>
           </CardHeader>
           <CardContent>
             {recentPosts.length === 0 ? (
@@ -304,8 +313,8 @@ function Dashboard() {
                 <p className="text-muted-foreground">
                   Connect with more professionals to see their updates
                 </p>
-                <Button 
-                  className="mt-4" 
+                <Button
+                  className="mt-4"
                   variant="outline"
                   onClick={() => navigate("/connections")}
                 >
@@ -326,7 +335,8 @@ function Dashboard() {
                           />
                         ) : (
                           <span className="text-primary-foreground font-semibold text-sm">
-                            {post.author?.firstName?.[0]}{post.author?.lastName?.[0]}
+                            {post.author?.firstName?.[0]}
+                            {post.author?.lastName?.[0]}
                           </span>
                         )}
                       </div>
@@ -354,8 +364,8 @@ function Dashboard() {
                     </div>
                   </div>
                 ))}
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="w-full"
                   onClick={() => navigate("/feed")}
                 >
@@ -371,9 +381,7 @@ function Dashboard() {
       <Card>
         <CardHeader>
           <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>
-            Common tasks and shortcuts
-          </CardDescription>
+          <CardDescription>Common tasks and shortcuts</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
