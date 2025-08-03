@@ -134,14 +134,20 @@ const uploadProfilePicture = async (req, res) => {
 
     // Handle file upload
     profilePictureUpload.single("profilePicture")(req, res, async (err) => {
+      console.log("Profile picture upload middleware called");
+      console.log("Request file:", req.file);
+      console.log("Request body:", req.body);
+
       if (err) {
+        console.error("Profile picture upload error:", err);
         return res.status(400).json({
           success: false,
-          message: err.message,
+          message: err.message || "File upload failed",
         });
       }
 
       if (!req.file) {
+        console.error("No file uploaded");
         return res.status(400).json({
           success: false,
           message: "No profile picture uploaded",
@@ -150,6 +156,12 @@ const uploadProfilePicture = async (req, res) => {
 
       try {
         const user = await User.findById(userId);
+        if (!user) {
+          return res.status(404).json({
+            success: false,
+            message: "User not found",
+          });
+        }
 
         // Delete old profile picture if exists
         if (user.profilePicture && user.profilePicture.public_id) {
@@ -157,13 +169,15 @@ const uploadProfilePicture = async (req, res) => {
             await deleteFromCloudinary(user.profilePicture.public_id);
           } catch (deleteError) {
             console.warn("Failed to delete old profile picture:", deleteError);
+            // Continue with upload even if old file deletion fails
           }
         }
 
         // Update user with new profile picture
+        // Cloudinary storage provides secure_url and public_id
         user.profilePicture = {
-          url: req.file.path,
-          public_id: req.file.filename,
+          url: req.file.secure_url || req.file.path,
+          public_id: req.file.public_id || req.file.filename,
         };
 
         await user.save();
@@ -177,7 +191,7 @@ const uploadProfilePicture = async (req, res) => {
         console.error("Database error during profile picture upload:", dbError);
         res.status(500).json({
           success: false,
-          message: "Failed to save profile picture",
+          message: "Failed to save profile picture to database",
         });
       }
     });
@@ -242,6 +256,10 @@ const uploadResume = async (req, res) => {
 
     // Handle file upload
     resumeUpload.single("resume")(req, res, async (err) => {
+      console.log("Resume upload middleware called");
+      console.log("Request file:", req.file);
+      console.log("Request body:", req.body);
+
       if (err) {
         console.error("Resume upload error:", err);
         return res.status(400).json({
@@ -251,9 +269,19 @@ const uploadResume = async (req, res) => {
       }
 
       if (!req.file) {
+        console.error("No resume file uploaded");
         return res.status(400).json({
           success: false,
           message: "No resume file uploaded",
+        });
+      }
+
+      // Additional validation for PDF files
+      if (req.file.mimetype !== "application/pdf") {
+        console.error("Invalid file type:", req.file.mimetype);
+        return res.status(400).json({
+          success: false,
+          message: "Only PDF files are allowed for resume upload",
         });
       }
 
@@ -408,6 +436,34 @@ const getResume = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Server error getting resume",
+    });
+  }
+};
+
+/**
+ * Serve resume file
+ * @route GET /api/users/resume/file
+ * @access Private
+ */
+const serveResumeFile = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const user = await User.findById(userId).select("resume");
+
+    if (!user.resume || !user.resume.url) {
+      return res.status(404).json({
+        success: false,
+        message: "No resume found",
+      });
+    }
+
+    // Redirect to the Cloudinary URL
+    res.redirect(user.resume.url);
+  } catch (error) {
+    console.error("Serve resume file error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error serving resume file",
     });
   }
 };
@@ -1099,6 +1155,7 @@ module.exports = {
   uploadResume,
   removeResume,
   getResume,
+  serveResumeFile,
   uploadCompanyLogo,
   updateSkills,
   searchUsers,
