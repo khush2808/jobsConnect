@@ -118,6 +118,76 @@ export const updateAppearanceSettings = createAsyncThunk(
   }
 );
 
+export const uploadProfilePicture = createAsyncThunk(
+  "auth/uploadProfilePicture",
+  async (file, { rejectWithValue }) => {
+    try {
+      const formData = new FormData();
+      formData.append("profilePicture", file);
+      
+      const response = await api.post("/users/profile-picture", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      return response.data.profilePicture;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to upload profile picture"
+      );
+    }
+  }
+);
+
+export const uploadResume = createAsyncThunk(
+  "auth/uploadResume",
+  async (file, { rejectWithValue }) => {
+    try {
+      const formData = new FormData();
+      formData.append("resume", file);
+      
+      const response = await api.post("/users/resume", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      return response.data.resume;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to upload resume"
+      );
+    }
+  }
+);
+
+export const removeProfilePicture = createAsyncThunk(
+  "auth/removeProfilePicture",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.delete("/users/profile-picture");
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to remove profile picture"
+      );
+    }
+  }
+);
+
+export const removeResume = createAsyncThunk(
+  "auth/removeResume",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.delete("/users/resume");
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to remove resume"
+      );
+    }
+  }
+);
+
 const authSlice = createSlice({
   name: "auth",
   initialState: {
@@ -270,6 +340,66 @@ const authSlice = createSlice({
         state.error = null;
       })
       .addCase(updateAppearanceSettings.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+
+      // Upload Profile Picture
+      .addCase(uploadProfilePicture.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(uploadProfilePicture.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = { ...state.user, profilePicture: action.payload };
+        state.error = null;
+      })
+      .addCase(uploadProfilePicture.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+
+      // Upload Resume
+      .addCase(uploadResume.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(uploadResume.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = { ...state.user, resume: action.payload };
+        state.error = null;
+      })
+      .addCase(uploadResume.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+
+      // Remove Profile Picture
+      .addCase(removeProfilePicture.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(removeProfilePicture.fulfilled, (state) => {
+        state.isLoading = false;
+        state.user = { ...state.user, profilePicture: null };
+        state.error = null;
+      })
+      .addCase(removeProfilePicture.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+
+      // Remove Resume
+      .addCase(removeResume.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(removeResume.fulfilled, (state) => {
+        state.isLoading = false;
+        state.user = { ...state.user, resume: null };
+        state.error = null;
+      })
+      .addCase(removeResume.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
       });

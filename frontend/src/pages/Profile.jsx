@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { updateUserProfile } from "../store/authSlice";
+import { 
+  updateUserProfile, 
+  uploadProfilePicture, 
+  uploadResume, 
+  removeProfilePicture, 
+  removeResume 
+} from "../store/authSlice";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import {
@@ -20,6 +26,11 @@ import {
   Edit,
   Save,
   Camera,
+  Upload,
+  Trash2,
+  FileText,
+  Mail,
+  Phone,
 } from "lucide-react";
 
 function Profile() {
@@ -33,6 +44,10 @@ function Profile() {
   const [success, setSuccess] = useState(null);
 
   const [profileData, setProfileData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
     bio: "",
     location: {
       city: "",
@@ -62,6 +77,10 @@ function Profile() {
   useEffect(() => {
     if (user) {
       setProfileData({
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        email: user.email || "",
+        phone: user.phone || "",
         bio: user.bio || "",
         location: user.location || { city: "", state: "", country: "" },
         jobPreferences: user.jobPreferences || {
@@ -87,6 +106,49 @@ function Profile() {
       setError(error.message || "Failed to update profile. Please try again.");
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const handleFileUpload = async (event, type) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      if (type === "profile-picture") {
+        await dispatch(uploadProfilePicture(file));
+        setSuccess("Profile picture uploaded successfully!");
+      } else if (type === "resume") {
+        await dispatch(uploadResume(file));
+        setSuccess("Resume uploaded successfully!");
+      }
+    } catch (error) {
+      setError(`Failed to upload ${type}. Please try again.`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRemoveFile = async (type) => {
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      if (type === "profile-picture") {
+        await dispatch(removeProfilePicture());
+        setSuccess("Profile picture removed successfully!");
+      } else if (type === "resume") {
+        await dispatch(removeResume());
+        setSuccess("Resume removed successfully!");
+      }
+    } catch (error) {
+      setError(`Failed to remove ${type}. Please try again.`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -192,9 +254,45 @@ function Profile() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Profile Picture */}
               <div className="flex items-center space-x-4">
-                <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center">
-                  <Camera className="h-8 w-8 text-primary-foreground" />
+                <div className="relative">
+                  {user.profilePicture ? (
+                    <img
+                      src={user.profilePicture.url}
+                      alt="Profile"
+                      className="w-20 h-20 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center">
+                      <Camera className="h-8 w-8 text-primary-foreground" />
+                    </div>
+                  )}
+                  {isEditing && (
+                    <div className="absolute -bottom-2 -right-2 flex space-x-1">
+                      <label className="cursor-pointer">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleFileUpload(e, "profile-picture")}
+                          className="hidden"
+                        />
+                        <Button size="sm" className="h-6 w-6 p-0">
+                          <Upload className="h-3 w-3" />
+                        </Button>
+                      </label>
+                      {user.profilePicture && (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="h-6 w-6 p-0"
+                          onClick={() => handleRemoveFile("profile-picture")}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold">
@@ -207,76 +305,191 @@ function Profile() {
                 </div>
               </div>
 
-              <div className="space-y-4">
+              {/* Basic Info Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium">Bio</label>
-                  <textarea
-                    value={profileData.bio}
+                  <label className="text-sm font-medium">First Name</label>
+                  <Input
+                    type="text"
+                    value={profileData.firstName}
                     onChange={(e) =>
-                      setProfileData({ ...profileData, bio: e.target.value })
+                      setProfileData({ ...profileData, firstName: e.target.value })
                     }
-                    placeholder="Tell us about yourself..."
-                    className="w-full mt-1 px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                    rows={4}
+                    placeholder="First Name"
                     disabled={!isEditing}
                   />
                 </div>
+                <div>
+                  <label className="text-sm font-medium">Last Name</label>
+                  <Input
+                    type="text"
+                    value={profileData.lastName}
+                    onChange={(e) =>
+                      setProfileData({ ...profileData, lastName: e.target.value })
+                    }
+                    placeholder="Last Name"
+                    disabled={!isEditing}
+                  />
+                </div>
+              </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-sm font-medium">City</label>
-                    <Input
-                      type="text"
-                      value={profileData.location.city}
-                      onChange={(e) =>
-                        setProfileData({
-                          ...profileData,
-                          location: {
-                            ...profileData.location,
-                            city: e.target.value,
-                          },
-                        })
-                      }
-                      placeholder="City"
-                      disabled={!isEditing}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">State</label>
-                    <Input
-                      type="text"
-                      value={profileData.location.state}
-                      onChange={(e) =>
-                        setProfileData({
-                          ...profileData,
-                          location: {
-                            ...profileData.location,
-                            state: e.target.value,
-                          },
-                        })
-                      }
-                      placeholder="State"
-                      disabled={!isEditing}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Country</label>
-                    <Input
-                      type="text"
-                      value={profileData.location.country}
-                      onChange={(e) =>
-                        setProfileData({
-                          ...profileData,
-                          location: {
-                            ...profileData.location,
-                            country: e.target.value,
-                          },
-                        })
-                      }
-                      placeholder="Country"
-                      disabled={!isEditing}
-                    />
-                  </div>
+              <div>
+                <label className="text-sm font-medium">Email</label>
+                <Input
+                  type="email"
+                  value={profileData.email}
+                  onChange={(e) =>
+                    setProfileData({ ...profileData, email: e.target.value })
+                  }
+                  placeholder="Email"
+                  disabled={!isEditing}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Phone</label>
+                <Input
+                  type="tel"
+                  value={profileData.phone}
+                  onChange={(e) =>
+                    setProfileData({ ...profileData, phone: e.target.value })
+                  }
+                  placeholder="Phone"
+                  disabled={!isEditing}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Bio</label>
+                <textarea
+                  value={profileData.bio}
+                  onChange={(e) =>
+                    setProfileData({ ...profileData, bio: e.target.value })
+                  }
+                  placeholder="Tell us about yourself..."
+                  className="w-full mt-1 px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  rows={4}
+                  disabled={!isEditing}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="text-sm font-medium">City</label>
+                  <Input
+                    type="text"
+                    value={profileData.location.city}
+                    onChange={(e) =>
+                      setProfileData({
+                        ...profileData,
+                        location: {
+                          ...profileData.location,
+                          city: e.target.value,
+                        },
+                      })
+                    }
+                    placeholder="City"
+                    disabled={!isEditing}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">State</label>
+                  <Input
+                    type="text"
+                    value={profileData.location.state}
+                    onChange={(e) =>
+                      setProfileData({
+                        ...profileData,
+                        location: {
+                          ...profileData.location,
+                          state: e.target.value,
+                        },
+                      })
+                    }
+                    placeholder="State"
+                    disabled={!isEditing}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Country</label>
+                  <Input
+                    type="text"
+                    value={profileData.location.country}
+                    onChange={(e) =>
+                      setProfileData({
+                        ...profileData,
+                        location: {
+                          ...profileData.location,
+                          country: e.target.value,
+                        },
+                      })
+                    }
+                    placeholder="Country"
+                    disabled={!isEditing}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Resume Upload */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Resume</CardTitle>
+              <CardDescription>
+                Upload your resume (PDF format)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-4">
+                <div className="w-20 h-20 bg-secondary rounded-full flex items-center justify-center">
+                  <FileText className="h-8 w-8 text-secondary-foreground" />
+                </div>
+                <div className="flex-1">
+                  {user.resume ? (
+                    <div>
+                      <h3 className="font-medium">Current Resume</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {user.resume.filename}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Uploaded: {new Date(user.resume.uploadedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <h3 className="font-medium">No Resume Uploaded</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Upload your resume to increase your chances
+                      </p>
+                    </div>
+                  )}
+                  {isEditing && (
+                    <div className="flex space-x-2 mt-2">
+                      <label className="cursor-pointer">
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          onChange={(e) => handleFileUpload(e, "resume")}
+                          className="hidden"
+                        />
+                        <Button variant="outline" size="sm">
+                          <Upload className="h-4 w-4 mr-2" />
+                          Upload
+                        </Button>
+                      </label>
+                      {user.resume && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleRemoveFile("resume")}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Remove
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -514,6 +727,14 @@ function Profile() {
                 </span>
                 <span className="font-medium capitalize">
                   {user.accountType?.replace("_", " ")}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">
+                  Resume
+                </span>
+                <span className="font-medium">
+                  {user.resume ? "Uploaded" : "Not uploaded"}
                 </span>
               </div>
             </CardContent>

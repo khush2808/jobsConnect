@@ -28,6 +28,8 @@ router.use(protect); // All routes below require authentication
 // Specific routes must come before parameter routes
 router.get("/search", searchUsers);
 router.get("/connections", getConnections);
+router.get("/connections/pending", getPendingRequests);
+router.get("/suggested-connections", getSuggestedConnections);
 
 // Profile management
 router.put("/profile", validate(profileUpdateSchema), updateProfile);

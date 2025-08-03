@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { useSelector, useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { fetchMyApplications, fetchMyJobs } from "../store/jobsSlice";
+import { fetchJobs } from "../store/jobsSlice";
+import { fetchFeed } from "../store/postsSlice";
+import { fetchConnections } from "../store/connectionsSlice";
+import { Button } from "../components/ui/Button";
 import {
   Card,
   CardHeader,
@@ -9,84 +12,93 @@ import {
   CardDescription,
   CardContent,
 } from "../components/ui/Card";
-import { Button } from "../components/ui/Button";
 import {
   Briefcase,
   Users,
-  MessageSquare,
   TrendingUp,
-  Plus,
-  FileText,
+  Calendar,
+  MapPin,
+  DollarSign,
   Clock,
+  Eye,
+  Heart,
+  MessageSquare,
+  Plus,
+  Search,
+  Filter,
 } from "lucide-react";
 
 function Dashboard() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useSelector((state) => state.auth);
-  const { myApplications, myJobs } = useSelector((state) => state.jobs);
+  const { user } = useSelector((state) => state.auth);
+  const { jobs } = useSelector((state) => state.jobs);
+  const { feed } = useSelector((state) => state.posts);
+  const { connections } = useSelector((state) => state.connections);
 
+  const [recentJobs, setRecentJobs] = useState([]);
+  const [recommendedJobs, setRecommendedJobs] = useState([]);
+  const [recentPosts, setRecentPosts] = useState([]);
   const [stats, setStats] = useState({
-    appliedJobs: 0,
-    connections: 0,
-    messages: 0,
-    profileViews: 0,
+    totalJobs: 0,
+    totalConnections: 0,
+    totalPosts: 0,
+    profileCompletion: 0,
   });
 
   useEffect(() => {
-    // Fetch user's applications and posted jobs
-    if (isAuthenticated && user) {
-      dispatch(fetchMyApplications());
-      if (user.accountType === "employer") {
-        dispatch(fetchMyJobs());
-      }
-    }
-  }, [dispatch, isAuthenticated, user]);
+    // Fetch data for dashboard
+    dispatch(fetchJobs({ limit: 5 }));
+    dispatch(fetchFeed({ limit: 3 }));
+    dispatch(fetchConnections());
+  }, [dispatch]);
 
   useEffect(() => {
-    // Calculate stats from real data
-    setStats({
-      appliedJobs: myApplications?.length || 0,
-      connections: user?.connections?.length || 0,
-      messages: 0, // TODO: Implement messages feature
-      profileViews: user?.profileViews || 0,
-    });
-  }, [myApplications, user]);
+    // Calculate stats
+    if (user) {
+      const profileFields = [
+        user.firstName,
+        user.lastName,
+        user.bio,
+        user.location?.city,
+        user.skills?.length > 0,
+        user.resume,
+      ];
+      const completedFields = profileFields.filter(Boolean).length;
+      const profileCompletion = Math.round((completedFields / profileFields.length) * 100);
 
-  const getRecentActivity = () => {
-    const activities = [];
-
-    // Add recent applications
-    if (myApplications?.length > 0) {
-      const recentApplications = myApplications.slice(0, 3);
-      recentApplications.forEach((application) => {
-        activities.push({
-          type: "application",
-          title: `Applied to ${application.job?.title || "a job"}`,
-          time: application.appliedAt,
-          status: application.status,
-        });
+      setStats({
+        totalJobs: jobs.length,
+        totalConnections: connections.length,
+        totalPosts: feed.length,
+        profileCompletion,
       });
     }
+  }, [user, jobs, connections, feed]);
 
-    // Add recent job postings (for employers)
-    if (user?.accountType === "employer" && myJobs?.length > 0) {
-      const recentJobs = myJobs.slice(0, 2);
-      recentJobs.forEach((job) => {
-        activities.push({
-          type: "job_posted",
-          title: `Posted job: ${job.title}`,
-          time: job.createdAt,
-          applications: job.applications?.length || 0,
-        });
-      });
+  useEffect(() => {
+    // Filter and set recent jobs
+    const recent = jobs.slice(0, 5);
+    setRecentJobs(recent);
+
+    // Generate recommended jobs based on user skills
+    if (user?.skills && jobs.length > 0) {
+      const userSkills = user.skills.map(skill => skill.name.toLowerCase());
+      const recommended = jobs
+        .filter(job => 
+          job.skills?.some(skill => 
+            userSkills.includes(skill.name.toLowerCase())
+          )
+        )
+        .slice(0, 3);
+      setRecommendedJobs(recommended);
     }
+  }, [jobs, user]);
 
-    // Sort by time and return most recent
-    return activities
-      .sort((a, b) => new Date(b.time) - new Date(a.time))
-      .slice(0, 5);
-  };
+  useEffect(() => {
+    // Set recent posts
+    setRecentPosts(feed.slice(0, 3));
+  }, [feed]);
 
   const formatTimeAgo = (dateString) => {
     const date = new Date(dateString);
@@ -99,271 +111,307 @@ function Dashboard() {
     return `${Math.floor(diffInMinutes / 1440)}d ago`;
   };
 
+  const getProfileCompletionColor = (percentage) => {
+    if (percentage >= 80) return "text-green-600";
+    if (percentage >= 60) return "text-yellow-600";
+    return "text-red-600";
+  };
+
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Welcome Section */}
-      <div>
-        <h1 className="text-3xl font-bold">
-          Welcome back, {user?.firstName || "User"}!
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          Here's what's happening in your professional world today.
-        </p>
+      {/* Welcome Header */}
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold">
+            Welcome back, {user.firstName}!
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Here's what's happening in your professional network
+          </p>
+        </div>
+        <div className="flex space-x-2">
+          <Button onClick={() => navigate("/jobs/post")}>
+            <Plus className="h-4 w-4 mr-2" />
+            Post a Job
+          </Button>
+          <Button variant="outline" onClick={() => navigate("/feed")}>
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Create Post
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-primary/10 rounded-md">
-                <Briefcase className="h-6 w-6 text-primary" />
-              </div>
-              <div className="ml-4">
+            <div className="flex items-center justify-between">
+              <div>
                 <p className="text-sm font-medium text-muted-foreground">
-                  Applied Jobs
+                  Available Jobs
                 </p>
-                <p className="text-2xl font-bold">{stats.appliedJobs}</p>
+                <p className="text-2xl font-bold">{stats.totalJobs}</p>
               </div>
+              <Briefcase className="h-8 w-8 text-primary" />
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-primary/10 rounded-md">
-                <Users className="h-6 w-6 text-primary" />
-              </div>
-              <div className="ml-4">
+            <div className="flex items-center justify-between">
+              <div>
                 <p className="text-sm font-medium text-muted-foreground">
                   Connections
                 </p>
-                <p className="text-2xl font-bold">{stats.connections}</p>
+                <p className="text-2xl font-bold">{stats.totalConnections}</p>
               </div>
+              <Users className="h-8 w-8 text-primary" />
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-primary/10 rounded-md">
-                <MessageSquare className="h-6 w-6 text-primary" />
-              </div>
-              <div className="ml-4">
+            <div className="flex items-center justify-between">
+              <div>
                 <p className="text-sm font-medium text-muted-foreground">
-                  Messages
+                  Recent Posts
                 </p>
-                <p className="text-2xl font-bold">{stats.messages}</p>
+                <p className="text-2xl font-bold">{stats.totalPosts}</p>
               </div>
+              <TrendingUp className="h-8 w-8 text-primary" />
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-primary/10 rounded-md">
-                <TrendingUp className="h-6 w-6 text-primary" />
-              </div>
-              <div className="ml-4">
+            <div className="flex items-center justify-between">
+              <div>
                 <p className="text-sm font-medium text-muted-foreground">
-                  Profile Views
+                  Profile Completion
                 </p>
-                <p className="text-2xl font-bold">{stats.profileViews}</p>
+                <p className={`text-2xl font-bold ${getProfileCompletionColor(stats.profileCompletion)}`}>
+                  {stats.profileCompletion}%
+                </p>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <span className="text-primary font-bold text-sm">
+                  {stats.profileCompletion}
+                </span>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recommended Jobs */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recommended Jobs</CardTitle>
+            <CardDescription>
+              Jobs matching your skills and preferences
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {recommendedJobs.length === 0 ? (
+              <div className="text-center py-8">
+                <Briefcase className="mx-auto h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-4 text-lg font-medium">No recommendations yet</h3>
+                <p className="text-muted-foreground">
+                  Add more skills to your profile to get personalized job recommendations
+                </p>
+                <Button 
+                  className="mt-4" 
+                  variant="outline"
+                  onClick={() => navigate("/profile")}
+                >
+                  Update Profile
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {recommendedJobs.map((job) => (
+                  <div
+                    key={job._id}
+                    className="p-4 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/jobs/${job._id}`)}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <h3 className="font-semibold">{job.title}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {job.company?.name || "Company"}
+                        </p>
+                        <div className="flex items-center space-x-4 mt-2 text-xs text-muted-foreground">
+                          <div className="flex items-center">
+                            <MapPin className="h-3 w-3 mr-1" />
+                            {job.location}
+                          </div>
+                          <div className="flex items-center">
+                            <DollarSign className="h-3 w-3 mr-1" />
+                            {job.salary?.min && job.salary?.max
+                              ? `${job.salary.min}-${job.salary.max}`
+                              : "Salary not specified"}
+                          </div>
+                          <div className="flex items-center">
+                            <Clock className="h-3 w-3 mr-1" />
+                            {job.jobType}
+                          </div>
+                        </div>
+                      </div>
+                      <Button variant="outline" size="sm">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => navigate("/jobs")}
+                >
+                  View All Jobs
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Recent Activity */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+            <CardDescription>
+              Latest posts from your network
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {recentPosts.length === 0 ? (
+              <div className="text-center py-8">
+                <MessageSquare className="mx-auto h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-4 text-lg font-medium">No recent activity</h3>
+                <p className="text-muted-foreground">
+                  Connect with more professionals to see their updates
+                </p>
+                <Button 
+                  className="mt-4" 
+                  variant="outline"
+                  onClick={() => navigate("/connections")}
+                >
+                  Find Connections
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {recentPosts.map((post) => (
+                  <div key={post._id} className="p-4 border rounded-lg">
+                    <div className="flex items-start space-x-3">
+                      <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                        {post.author?.profilePicture ? (
+                          <img
+                            src={post.author.profilePicture.url}
+                            alt="Profile"
+                            className="w-8 h-8 rounded-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-primary-foreground font-semibold text-sm">
+                            {post.author?.firstName?.[0]}{post.author?.lastName?.[0]}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2">
+                          <span className="font-medium">
+                            {post.author?.firstName} {post.author?.lastName}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {formatTimeAgo(post.createdAt)}
+                          </span>
+                        </div>
+                        <p className="text-sm mt-1">{post.content}</p>
+                        <div className="flex items-center space-x-4 mt-2 text-xs text-muted-foreground">
+                          <div className="flex items-center">
+                            <Heart className="h-3 w-3 mr-1" />
+                            {post.likesCount || 0}
+                          </div>
+                          <div className="flex items-center">
+                            <MessageSquare className="h-3 w-3 mr-1" />
+                            {post.commentsCount || 0}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => navigate("/feed")}
+                >
+                  View All Posts
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Get started with common tasks</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+          <CardDescription>
+            Common tasks and shortcuts
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Button
-              className="w-full justify-start"
+              variant="outline"
+              className="h-20 flex-col"
               onClick={() => navigate("/jobs")}
             >
-              <Briefcase className="mr-2 h-4 w-4" />
-              Browse Jobs
+              <Search className="h-6 w-6 mb-2" />
+              <span className="text-sm">Search Jobs</span>
             </Button>
             <Button
               variant="outline"
-              className="w-full justify-start"
+              className="h-20 flex-col"
               onClick={() => navigate("/connections")}
             >
-              <Users className="mr-2 h-4 w-4" />
-              Find Connections
+              <Users className="h-6 w-6 mb-2" />
+              <span className="text-sm">My Network</span>
             </Button>
             <Button
               variant="outline"
-              className="w-full justify-start"
-              onClick={() => navigate("/feed")}
+              className="h-20 flex-col"
+              onClick={() => navigate("/profile")}
             >
-              <MessageSquare className="mr-2 h-4 w-4" />
-              Create Post
+              <Briefcase className="h-6 w-6 mb-2" />
+              <span className="text-sm">Update Profile</span>
             </Button>
-            {user?.accountType === "employer" && (
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => navigate("/jobs/post")}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Post a Job
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>
-              Your latest interactions and updates
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {getRecentActivity().length > 0 ? (
-                getRecentActivity().map((activity, index) => (
-                  <div key={index} className="flex items-start space-x-3">
-                    <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
-                    <div className="flex-1">
-                      <p className="text-sm">{activity.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatTimeAgo(activity.time)}
-                        {activity.status && ` • ${activity.status}`}
-                        {activity.applications &&
-                          ` • ${activity.applications} applications`}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-4">
-                  <FileText className="mx-auto h-8 w-8 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground mt-2">
-                    No recent activity
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Start by browsing jobs or creating a post
-                  </p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent Applications (for job seekers) */}
-      {user?.accountType === "job_seeker" && myApplications?.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Applications</CardTitle>
-            <CardDescription>
-              Track your recent job applications
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {myApplications.slice(0, 3).map((application, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-3 border rounded-lg"
-                >
-                  <div>
-                    <p className="font-medium">{application.job?.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {application.job?.employer?.firstName}{" "}
-                      {application.job?.employer?.lastName}
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span
-                      className={`px-2 py-1 text-xs rounded-full ${
-                        application.status === "pending"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : application.status === "accepted"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {application.status}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatTimeAgo(application.appliedAt)}
-                    </span>
-                  </div>
-                </div>
-              ))}
-              {myApplications.length > 3 && (
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => navigate("/jobs/applications")}
-                >
-                  View All Applications
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Recent Job Postings (for employers) */}
-      {user?.accountType === "employer" && myJobs?.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Job Postings</CardTitle>
-            <CardDescription>Manage your posted jobs</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {myJobs.slice(0, 3).map((job, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-3 border rounded-lg"
-                >
-                  <div>
-                    <p className="font-medium">{job.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {job.applications?.length || 0} applications
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-xs text-muted-foreground">
-                      {formatTimeAgo(job.createdAt)}
-                    </span>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => navigate(`/jobs/${job._id}`)}
-                    >
-                      View
-                    </Button>
-                  </div>
-                </div>
-              ))}
-              {myJobs.length > 3 && (
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => navigate("/jobs/my/posted")}
-                >
-                  View All Jobs
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            <Button
+              variant="outline"
+              className="h-20 flex-col"
+              onClick={() => navigate("/applications")}
+            >
+              <Calendar className="h-6 w-6 mb-2" />
+              <span className="text-sm">My Applications</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

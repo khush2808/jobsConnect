@@ -38,14 +38,7 @@ function Settings() {
   const [success, setSuccess] = useState(null);
   const [error, setError] = useState(null);
 
-  // Profile Settings
-  const [profileData, setProfileData] = useState({
-    firstName: user?.firstName || "",
-    lastName: user?.lastName || "",
-    email: user?.email || "",
-    phone: user?.phone || "",
-    bio: user?.bio || "",
-  });
+
 
   // Security Settings
   const [securityData, setSecurityData] = useState({
@@ -76,20 +69,7 @@ function Settings() {
     timezone: user?.appearanceSettings?.timezone ?? "UTC",
   });
 
-  const handleProfileUpdate = async () => {
-    setIsLoading(true);
-    setError(null);
-    setSuccess(null);
 
-    try {
-      await dispatch(updateUser(profileData));
-      setSuccess("Profile updated successfully!");
-    } catch (error) {
-      setError("Failed to update profile. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handlePasswordChange = async () => {
     if (securityData.newPassword !== securityData.confirmPassword) {
@@ -158,47 +138,9 @@ function Settings() {
     }
   };
 
-  const handleFileUpload = async (event, type) => {
-    const file = event.target.files[0];
-    if (!file) return;
 
-    setIsLoading(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      let response;
-      if (type === "profile-picture") {
-        response = await fileUploadService.uploadProfilePicture(file);
-      } else if (type === "resume") {
-        response = await fileUploadService.uploadResume(file);
-      } else {
-        throw new Error("Invalid file type");
-      }
-
-      // Update user profile with new file URL
-      if (response.success) {
-        await dispatch(
-          updateUser({
-            [type === "profile-picture" ? "profilePicture" : "resume"]:
-              response.data,
-          })
-        );
-        setSuccess(
-          `${
-            type === "profile-picture" ? "Profile picture" : "Resume"
-          } updated successfully!`
-        );
-      }
-    } catch (error) {
-      setError(`Failed to upload ${type}. Please try again.`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const tabs = [
-    { id: "profile", name: "Profile", icon: User },
     { id: "security", name: "Security", icon: Shield },
     { id: "notifications", name: "Notifications", icon: Bell },
     { id: "appearance", name: "Appearance", icon: Palette },
@@ -262,156 +204,6 @@ function Settings() {
 
         {/* Main Content */}
         <div className="lg:col-span-3">
-          {activeTab === "profile" && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Profile Settings</CardTitle>
-                <CardDescription>
-                  Update your personal information and profile
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Profile Picture */}
-                <div className="flex items-center space-x-4">
-                  <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center">
-                    <Camera className="h-8 w-8 text-primary-foreground" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium">Profile Picture</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Upload a new profile picture
-                    </p>
-                    <div className="flex space-x-2 mt-2">
-                      <label className="cursor-pointer">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) =>
-                            handleFileUpload(e, "profile-picture")
-                          }
-                          className="hidden"
-                        />
-                        <Button variant="outline" size="sm">
-                          <Upload className="h-4 w-4 mr-2" />
-                          Upload
-                        </Button>
-                      </label>
-                      <Button variant="outline" size="sm">
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Remove
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Resume Upload */}
-                <div className="flex items-center space-x-4">
-                  <div className="w-20 h-20 bg-secondary rounded-full flex items-center justify-center">
-                    <Upload className="h-8 w-8 text-secondary-foreground" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium">Resume</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Upload your resume (PDF format)
-                    </p>
-                    <div className="flex space-x-2 mt-2">
-                      <label className="cursor-pointer">
-                        <input
-                          type="file"
-                          accept=".pdf"
-                          onChange={(e) => handleFileUpload(e, "resume")}
-                          className="hidden"
-                        />
-                        <Button variant="outline" size="sm">
-                          <Upload className="h-4 w-4 mr-2" />
-                          Upload
-                        </Button>
-                      </label>
-                      <Button variant="outline" size="sm">
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Remove
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Basic Information */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium">First Name</label>
-                    <Input
-                      type="text"
-                      value={profileData.firstName}
-                      onChange={(e) =>
-                        setProfileData({
-                          ...profileData,
-                          firstName: e.target.value,
-                        })
-                      }
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Last Name</label>
-                    <Input
-                      type="text"
-                      value={profileData.lastName}
-                      onChange={(e) =>
-                        setProfileData({
-                          ...profileData,
-                          lastName: e.target.value,
-                        })
-                      }
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium">Email</label>
-                  <Input
-                    type="email"
-                    value={profileData.email}
-                    onChange={(e) =>
-                      setProfileData({ ...profileData, email: e.target.value })
-                    }
-                    className="mt-1"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium">Phone</label>
-                  <Input
-                    type="tel"
-                    value={profileData.phone}
-                    onChange={(e) =>
-                      setProfileData({ ...profileData, phone: e.target.value })
-                    }
-                    className="mt-1"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium">Bio</label>
-                  <textarea
-                    value={profileData.bio}
-                    onChange={(e) =>
-                      setProfileData({ ...profileData, bio: e.target.value })
-                    }
-                    rows={4}
-                    className="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-none mt-1"
-                    placeholder="Tell us about yourself..."
-                  />
-                </div>
-
-                <Button onClick={handleProfileUpdate} disabled={isLoading}>
-                  <Save className="h-4 w-4 mr-2" />
-                  {isLoading ? "Saving..." : "Save Changes"}
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
           {activeTab === "security" && (
             <Card>
               <CardHeader>

@@ -833,6 +833,126 @@ const removeConnection = async (req, res) => {
 };
 
 /**
+ * Get pending connection requests
+ * @route GET /api/users/connections/pending
+ * @access Private
+ */
+const getPendingRequests = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { page = 1, limit = 10 } = req.query;
+
+    const user = await User.findById(userId)
+      .populate({
+        path: "connections.user",
+        select: "firstName lastName profilePicture bio location skills",
+        match: { "connections.status": "pending" },
+      })
+      .select("connections");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Filter pending requests
+    const pendingRequests = user.connections.filter(
+      (conn) => conn.status === "pending"
+    );
+
+    // Pagination
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+    const paginatedRequests = pendingRequests.slice(startIndex, endIndex);
+
+    res.status(200).json({
+      success: true,
+      data: paginatedRequests,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(pendingRequests.length / limit),
+        totalRequests: pendingRequests.length,
+        hasNext: endIndex < pendingRequests.length,
+        hasPrev: page > 1,
+      },
+    });
+  } catch (error) {
+    console.error("Get pending requests error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error getting pending requests",
+    });
+  }
+};
+
+/**
+ * Get suggested connections
+ * @route GET /api/users/suggested-connections
+ * @access Private
+ */
+const getSuggestedConnections = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { page = 1, limit = 10 } = req.query;
+
+    const currentUser = await User.findById(userId).select("connections skills location");
+    if (!currentUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Get users that the current user is not connected with
+    const connectedUserIds = currentUser.connections.map(conn => conn.user.toString());
+    connectedUserIds.push(userId.toString());
+
+    // Find users with similar skills or location
+    const suggestedUsers = await User.find({
+      _id: { $nin: connectedUserIds },
+      accountType: { $ne: "admin" }, // Exclude admins
+    })
+      .select("firstName lastName profilePicture bio location skills")
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit));
+
+    // Sort by relevance (users with similar skills first)
+    const sortedUsers = suggestedUsers.sort((a, b) => {
+      const aSkillMatch = currentUser.skills.some(skill => 
+        a.skills.some(userSkill => userSkill.name === skill.name)
+      );
+      const bSkillMatch = currentUser.skills.some(skill => 
+        b.skills.some(userSkill => userSkill.name === skill.name)
+      );
+      
+      if (aSkillMatch && !bSkillMatch) return -1;
+      if (!aSkillMatch && bSkillMatch) return 1;
+      return 0;
+    });
+
+    res.status(200).json({
+      success: true,
+      data: sortedUsers,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(suggestedUsers.length / limit),
+        totalUsers: suggestedUsers.length,
+        hasNext: suggestedUsers.length === parseInt(limit),
+        hasPrev: page > 1,
+      },
+    });
+  } catch (error) {
+    console.error("Get suggested connections error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error getting suggested connections",
+    });
+  }
+};
+
+/**
  * Update notification settings
  * @route PUT /api/users/notifications
  * @access Private
@@ -963,6 +1083,8 @@ module.exports = {
   sendConnectionRequest,
   respondToConnectionRequest,
   getConnections,
+  getPendingRequests,
+  getSuggestedConnections,
   removeConnection,
   updateNotificationSettings,
   updateAppearanceSettings,

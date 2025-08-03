@@ -8,7 +8,7 @@ class FileUploadService {
    */
   async uploadProfilePicture(file) {
     const formData = new FormData();
-    formData.append("profile-picture", file);
+    formData.append("profilePicture", file);
 
     const response = await api.post("/users/profile-picture", formData, {
       headers: {
