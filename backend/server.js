@@ -14,6 +14,7 @@ const userRoutes = require("./routes/userRoutes");
 const jobRoutes = require("./routes/jobRoutes");
 const postRoutes = require("./routes/postRoutes");
 const aiRoutes = require("./routes/aiRoutes");
+const testRoutes = require("./test-endpoint");
 
 // Import middleware
 const errorHandler = require("./middleware/errorHandler");
@@ -85,6 +86,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/jobs", jobRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/test", testRoutes);
 
 // Error handling middleware
 app.use(notFound);

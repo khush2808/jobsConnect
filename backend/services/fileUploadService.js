@@ -151,6 +151,8 @@ const uploadResumeToCloudinary = async (buffer, filename) => {
             resource_type: "raw",
             public_id: `resume_${Date.now()}`,
             format: "pdf",
+            access_mode: "public",
+            type: "upload",
           },
           (error, result) => {
             if (error) {
@@ -207,6 +209,32 @@ const getFileInfo = async (publicId, resourceType = "image") => {
     return result;
   } catch (error) {
     console.error("Error getting file info:", error);
+    return null;
+  }
+};
+
+/**
+ * Generate signed URL for secure access
+ */
+const generateSignedUrl = (publicId, resourceType = "raw") => {
+  try {
+    const timestamp = Math.round(new Date().getTime() / 1000);
+    const signature = cloudinary.utils.api_sign_request(
+      {
+        public_id: publicId,
+        timestamp: timestamp,
+      },
+      process.env.CLOUDINARY_API_SECRET
+    );
+
+    return cloudinary.url(publicId, {
+      resource_type: resourceType,
+      sign_url: true,
+      type: "upload",
+      secure: true,
+    });
+  } catch (error) {
+    console.error("Error generating signed URL:", error);
     return null;
   }
 };
@@ -331,6 +359,7 @@ module.exports = {
   parsePDF,
   deleteFromCloudinary,
   getFileInfo,
+  generateSignedUrl,
   handleUploadError,
   validateCloudinaryConfig,
   getImageTransformation,
