@@ -121,6 +121,18 @@ function Dashboard() {
     return "text-red-600";
   };
 
+  // Utility function to format location objects
+  const formatLocation = (location) => {
+    if (!location) return "Location not specified";
+    const { city, state, country } = location;
+    if (city && state && country) return `${city}, ${state}, ${country}`;
+    if (city && country) return `${city}, ${country}`;
+    if (city) return city;
+    if (state) return state;
+    if (country) return country;
+    return "Location not specified";
+  };
+
   if (!user) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -267,7 +279,7 @@ function Dashboard() {
                         <div className="flex items-center space-x-4 mt-2 text-xs text-muted-foreground">
                           <div className="flex items-center">
                             <MapPin className="h-3 w-3 mr-1" />
-                            {job.location}
+                            {formatLocation(job.location)}
                           </div>
                           <div className="flex items-center">
                             <DollarSign className="h-3 w-3 mr-1" />
