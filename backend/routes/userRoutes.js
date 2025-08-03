@@ -16,6 +16,8 @@ const {
   removeConnection,
   updateNotificationSettings,
   updateAppearanceSettings,
+  getPendingRequests,
+  getSuggestedConnections,
 } = require("../controllers/userController");
 const { protect, optionalAuth } = require("../middleware/auth");
 const { validate, profileUpdateSchema } = require("../middleware/validation");
