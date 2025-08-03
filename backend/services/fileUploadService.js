@@ -138,6 +138,11 @@ const postMediaUpload = multer({
  */
 const uploadResumeToCloudinary = async (buffer, filename) => {
   try {
+    // Validate Cloudinary configuration
+    if (!validateCloudinaryConfig()) {
+      throw new Error("Cloudinary configuration is missing or invalid");
+    }
+
     return new Promise((resolve, reject) => {
       cloudinary.uploader
         .upload_stream(
@@ -149,7 +154,8 @@ const uploadResumeToCloudinary = async (buffer, filename) => {
           },
           (error, result) => {
             if (error) {
-              reject(error);
+              console.error("Cloudinary upload error:", error);
+              reject(new Error(`Cloudinary upload failed: ${error.message}`));
             } else {
               resolve(result);
             }
@@ -158,7 +164,8 @@ const uploadResumeToCloudinary = async (buffer, filename) => {
         .end(buffer);
     });
   } catch (error) {
-    throw new Error("Failed to upload resume to Cloudinary");
+    console.error("Resume upload error:", error);
+    throw new Error(`Failed to upload resume to Cloudinary: ${error.message}`);
   }
 };
 
@@ -257,7 +264,23 @@ const validateCloudinaryConfig = () => {
     console.warn(`Missing Cloudinary configuration: ${missing.join(", ")}`);
     return false;
   }
-  return true;
+
+  // Test if Cloudinary credentials are valid
+  try {
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+    if (!cloudName || !apiKey || !apiSecret) {
+      console.warn("Invalid Cloudinary credentials");
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Cloudinary configuration error:", error);
+    return false;
+  }
 };
 
 /**
