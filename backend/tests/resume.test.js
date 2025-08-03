@@ -51,7 +51,6 @@ describe("Resume Upload API Tests", () => {
       expect(response.body.success).toBe(true);
       expect(response.body.message).toBe("Resume uploaded successfully");
       expect(response.body.resume).toBeDefined();
-      expect(response.body.resume.url).toBeDefined();
       expect(response.body.resume.filename).toBe("test-file.pdf");
       expect(response.body.resume.uploadedAt).toBeDefined();
       expect(response.body.resume.preview).toBeDefined();
@@ -103,7 +102,6 @@ describe("Resume Upload API Tests", () => {
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.resume).toBeDefined();
-      expect(response.body.resume.url).toBeDefined();
       expect(response.body.resume.filename).toBeDefined();
       expect(response.body.resume.uploadedAt).toBeDefined();
     });
@@ -149,9 +147,11 @@ describe("Resume Upload API Tests", () => {
         .get("/api/users/resume/file")
         .set("Cookie", authToken);
 
-      expect(response.status).toBe(302); // Redirect status
-      expect(response.headers.location).toBeDefined();
-      expect(response.headers.location).toContain("cloudinary.com");
+      expect(response.status).toBe(200); // JSON response with signed URL
+      expect(response.body.success).toBe(true);
+      expect(response.body.downloadUrl).toBeDefined();
+      expect(response.body.filename).toBeDefined();
+      expect(response.body.downloadUrl).toContain("cloudinary.com");
     });
 
     it("should fail without authentication", async () => {
