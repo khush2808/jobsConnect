@@ -243,9 +243,10 @@ const uploadResume = async (req, res) => {
     // Handle file upload
     resumeUpload.single("resume")(req, res, async (err) => {
       if (err) {
+        console.error("Resume upload error:", err);
         return res.status(400).json({
           success: false,
-          message: err.message,
+          message: err.message || "File upload failed",
         });
       }
 
@@ -258,6 +259,12 @@ const uploadResume = async (req, res) => {
 
       try {
         const user = await User.findById(userId);
+        if (!user) {
+          return res.status(404).json({
+            success: false,
+            message: "User not found",
+          });
+        }
 
         // Parse PDF and extract text for preview
         let resumeText = "";
@@ -265,6 +272,7 @@ const uploadResume = async (req, res) => {
           resumeText = await parsePDF(req.file.buffer);
         } catch (parseError) {
           console.warn("Failed to parse PDF:", parseError);
+          // Continue without text preview
         }
 
         // Delete old resume if exists
@@ -273,14 +281,24 @@ const uploadResume = async (req, res) => {
             await deleteFromCloudinary(user.resume.public_id, "raw");
           } catch (deleteError) {
             console.warn("Failed to delete old resume:", deleteError);
+            // Continue with upload even if old file deletion fails
           }
         }
 
         // Upload resume to Cloudinary
-        const uploadResult = await uploadResumeToCloudinary(
-          req.file.buffer,
-          req.file.originalname
-        );
+        let uploadResult;
+        try {
+          uploadResult = await uploadResumeToCloudinary(
+            req.file.buffer,
+            req.file.originalname
+          );
+        } catch (uploadError) {
+          console.error("Cloudinary upload error:", uploadError);
+          return res.status(500).json({
+            success: false,
+            message: "Failed to upload resume to cloud storage",
+          });
+        }
 
         // Update user with new resume
         user.resume = {
@@ -306,7 +324,7 @@ const uploadResume = async (req, res) => {
         console.error("Database error during resume upload:", dbError);
         res.status(500).json({
           success: false,
-          message: "Failed to save resume",
+          message: "Failed to save resume to database",
         });
       }
     });
@@ -897,7 +915,9 @@ const getSuggestedConnections = async (req, res) => {
     const userId = req.user._id;
     const { page = 1, limit = 10 } = req.query;
 
-    const currentUser = await User.findById(userId).select("connections skills location");
+    const currentUser = await User.findById(userId).select(
+      "connections skills location"
+    );
     if (!currentUser) {
       return res.status(404).json({
         success: false,
@@ -906,7 +926,9 @@ const getSuggestedConnections = async (req, res) => {
     }
 
     // Get users that the current user is not connected with
-    const connectedUserIds = currentUser.connections.map(conn => conn.user.toString());
+    const connectedUserIds = currentUser.connections.map((conn) =>
+      conn.user.toString()
+    );
     connectedUserIds.push(userId.toString());
 
     // Find users with similar skills or location
@@ -920,13 +942,13 @@ const getSuggestedConnections = async (req, res) => {
 
     // Sort by relevance (users with similar skills first)
     const sortedUsers = suggestedUsers.sort((a, b) => {
-      const aSkillMatch = currentUser.skills.some(skill => 
-        a.skills.some(userSkill => userSkill.name === skill.name)
+      const aSkillMatch = currentUser.skills.some((skill) =>
+        a.skills.some((userSkill) => userSkill.name === skill.name)
       );
-      const bSkillMatch = currentUser.skills.some(skill => 
-        b.skills.some(userSkill => userSkill.name === skill.name)
+      const bSkillMatch = currentUser.skills.some((skill) =>
+        b.skills.some((userSkill) => userSkill.name === skill.name)
       );
-      
+
       if (aSkillMatch && !bSkillMatch) return -1;
       if (!aSkillMatch && bSkillMatch) return 1;
       return 0;
