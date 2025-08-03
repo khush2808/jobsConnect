@@ -45,6 +45,7 @@ const corsOptions = {
     "http://localhost:3000",
     "https://rizeos-app.vercel.app",
     "https://rizeos-preview.vercel.app",
+    "jobsconnect.pages.dev"
   ],
   credentials: true,
   optionsSuccessStatus: 200,
