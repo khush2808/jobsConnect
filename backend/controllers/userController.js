@@ -508,41 +508,12 @@ const serveResumeFileDirect = async (req, res) => {
       });
     }
 
-    // Fetch the file from Cloudinary and stream it to the client
-    const https = require("https");
-    const httpsAgent = new https.Agent({
-      rejectUnauthorized: false,
+    // Return the URL for the frontend to handle
+    res.json({
+      success: true,
+      downloadUrl: signedUrl,
+      filename: user.resume.filename || "resume.pdf",
     });
-
-    https
-      .get(signedUrl, { agent: httpsAgent }, (cloudinaryRes) => {
-        if (cloudinaryRes.statusCode !== 200) {
-          return res.status(404).json({
-            success: false,
-            message: "File not found on Cloudinary",
-          });
-        }
-
-        // Set headers for file download
-        res.setHeader("Content-Type", "application/pdf");
-        res.setHeader(
-          "Content-Disposition",
-          `attachment; filename="${user.resume.filename || "resume.pdf"}"`
-        );
-        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-        res.setHeader("Pragma", "no-cache");
-        res.setHeader("Expires", "0");
-
-        // Pipe the file stream to the response
-        cloudinaryRes.pipe(res);
-      })
-      .on("error", (error) => {
-        console.error("Error fetching file from Cloudinary:", error);
-        res.status(500).json({
-          success: false,
-          message: "Failed to download file",
-        });
-      });
   } catch (error) {
     console.error("Serve resume file direct error:", error);
     res.status(500).json({

@@ -6,7 +6,6 @@ const {
   toggleLike,
   addComment,
   deleteComment,
-  sharePost,
   updatePost,
   deletePost,
   getMyPosts,
@@ -38,7 +37,6 @@ router.post("/", validate(postCreateSchema), createPost);
 router.post("/:id/like", toggleLike);
 router.post("/:id/comments", validate(commentSchema), addComment);
 router.delete("/:id/comments/:commentId", deleteComment);
-router.post("/:id/share", sharePost);
 
 // Post CRUD (author only)
 router.put("/:id", validate(postUpdateSchema), updatePost);

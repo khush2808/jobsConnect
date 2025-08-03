@@ -264,7 +264,7 @@ function Profile() {
   };
 
   const handleDownloadFile = async (url, filename, type) => {
-    if (!url && type !== "Resume") {
+    if (!url) {
       setError(`${type} not available for download`);
       return;
     }
@@ -274,49 +274,26 @@ function Profile() {
     setSuccess(null);
 
     try {
-      if (type === "Resume") {
-        // For resumes, use direct download endpoint
-        const downloadUrl = `${
-          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
-        }/users/resume/download`;
-
-        // Create download link that goes directly to our backend
+      // For files (images), use direct URLs
+      if (url && url.includes("cloudinary.com")) {
+        window.open(url, "_blank");
+        setSuccess(`${type} opened in new tab`);
+      } else if (url && url.startsWith("http")) {
+        window.open(url, "_blank");
+        setSuccess(`${type} opened in new tab`);
+      } else {
         const link = document.createElement("a");
-        link.href = downloadUrl;
-        link.download = filename || "resume.pdf";
+        link.href = url;
+        link.download = filename || `${type.toLowerCase()}_${Date.now()}`;
         link.target = "_blank";
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         setSuccess(`${type} download started`);
-      } else {
-        // For other files (images), use direct URLs
-        if (url && url.includes("cloudinary.com")) {
-          window.open(url, "_blank");
-          setSuccess(`${type} opened in new tab`);
-        } else if (url && url.startsWith("http")) {
-          window.open(url, "_blank");
-          setSuccess(`${type} opened in new tab`);
-        } else {
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = filename || `${type.toLowerCase()}_${Date.now()}`;
-          link.target = "_blank";
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          setSuccess(`${type} download started`);
-        }
       }
     } catch (error) {
       console.error("Download error:", error);
-      if (error.response?.status === 404) {
-        setError("Resume not found. Please upload a resume first.");
-      } else if (error.response?.status === 401) {
-        setError("Please log in to download your resume.");
-      } else {
-        setError(`Failed to download ${type.toLowerCase()}. Please try again.`);
-      }
+      setError(`Failed to download ${type.toLowerCase()}. Please try again.`);
     } finally {
       setIsFileLoading(false);
     }
@@ -641,30 +618,6 @@ function Profile() {
                         {user.resume.filename || "Resume.pdf"}
                       </p>
                       <div className="flex space-x-2 mt-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            handleDownloadFile(
-                              null,
-                              user.resume.filename,
-                              "Resume"
-                            )
-                          }
-                          disabled={isFileLoading}
-                        >
-                          {isFileLoading ? (
-                            <>
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
-                              Generating...
-                            </>
-                          ) : (
-                            <>
-                              <Download className="h-4 w-4 mr-2" />
-                              Download
-                            </>
-                          )}
-                        </Button>
                         {isEditing && (
                           <Button
                             variant="outline"

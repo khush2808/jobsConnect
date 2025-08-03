@@ -8,6 +8,7 @@ const {
   removeResume,
   getResume,
   serveResumeFile,
+  serveResumeFileDirect,
   uploadCompanyLogo,
   updateSkills,
   searchUsers,
@@ -42,6 +43,7 @@ router.post("/resume", uploadResume);
 router.delete("/resume", removeResume);
 router.get("/resume", getResume);
 router.get("/resume/file", serveResumeFile);
+router.get("/resume/download", serveResumeFileDirect);
 router.post("/company-logo", uploadCompanyLogo);
 router.put("/skills", updateSkills);
 

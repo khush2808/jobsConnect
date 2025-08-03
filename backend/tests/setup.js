@@ -13,17 +13,20 @@ jest.mock("cloudinary", () => ({
     config: jest.fn(),
     uploader: {
       upload_stream: jest.fn((options, callback) => {
+        const publicId =
+          options.public_id || `job-portal/resumes/resume_${Date.now()}`;
         callback(null, {
-          secure_url: "https://res.cloudinary.com/test/image/upload/test.jpg",
-          public_id: "test-public-id",
+          secure_url: `https://res.cloudinary.com/dukvhxrok/raw/upload/${publicId}`,
+          public_id: publicId,
         });
       }),
       destroy: jest.fn().mockResolvedValue({ result: "ok" }),
     },
     api: {
       resource: jest.fn().mockResolvedValue({
-        secure_url: "https://res.cloudinary.com/test/image/upload/test.jpg",
-        public_id: "test-public-id",
+        secure_url:
+          "https://res.cloudinary.com/dukvhxrok/raw/upload/job-portal/resumes/resume_1234567890.pdf",
+        public_id: "job-portal/resumes/resume_1234567890.pdf",
       }),
     },
   },

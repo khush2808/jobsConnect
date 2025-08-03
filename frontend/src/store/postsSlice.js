@@ -72,22 +72,6 @@ export const addComment = createAsyncThunk(
   }
 );
 
-export const sharePost = createAsyncThunk(
-  "posts/sharePost",
-  async ({ postId, shareComment }, { rejectWithValue }) => {
-    try {
-      const response = await api.post(`/posts/${postId}/share`, {
-        shareComment,
-      });
-      return { postId, ...response.data.data };
-    } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to share post"
-      );
-    }
-  }
-);
-
 export const fetchMyPosts = createAsyncThunk(
   "posts/fetchMyPosts",
   async (params = {}, { rejectWithValue }) => {
@@ -235,24 +219,6 @@ const postsSlice = createSlice({
         if (state.currentPost && state.currentPost._id === postId) {
           state.currentPost.comments.push(comment);
           state.currentPost.commentsCount += 1;
-        }
-      })
-
-      // Share Post
-      .addCase(sharePost.fulfilled, (state, action) => {
-        const { postId, sharesCount } = action.payload;
-
-        // Update in feed
-        const feedPostIndex = state.feed.findIndex(
-          (post) => post._id === postId
-        );
-        if (feedPostIndex !== -1) {
-          state.feed[feedPostIndex].sharesCount = sharesCount;
-        }
-
-        // Update current post if it matches
-        if (state.currentPost && state.currentPost._id === postId) {
-          state.currentPost.sharesCount = sharesCount;
         }
       })
 

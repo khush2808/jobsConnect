@@ -9,7 +9,7 @@ import {
 import { Card, CardContent } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
-import { MessageSquare, Heart, Share, Plus, Send } from "lucide-react";
+import { MessageSquare, Heart, Plus, Send } from "lucide-react";
 
 function Feed() {
   const dispatch = useDispatch();
@@ -19,6 +19,7 @@ function Feed() {
   const [newPostContent, setNewPostContent] = useState("");
   const [commentContent, setCommentContent] = useState("");
   const [activeCommentPost, setActiveCommentPost] = useState(null);
+  const [showComments, setShowComments] = useState({});
 
   useEffect(() => {
     dispatch(fetchFeed());
@@ -63,6 +64,13 @@ function Feed() {
     }
   };
 
+  const toggleComments = (postId) => {
+    setShowComments((prev) => ({
+      ...prev,
+      [postId]: !prev[postId],
+    }));
+  };
+
   const formatTimeAgo = (dateString) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -91,10 +99,6 @@ function Feed() {
             Stay updated with your professional network
           </p>
         </div>
-        <Button onClick={() => setNewPostContent("")}>
-          <Plus className="h-4 w-4 mr-2" />
-          Create Post
-        </Button>
       </div>
 
       {/* Error Display */}
@@ -195,6 +199,43 @@ function Feed() {
                       </div>
                     )}
 
+                    {/* Comments Section */}
+                    {showComments[post._id] &&
+                      post.comments &&
+                      post.comments.length > 0 && (
+                        <div className="mt-4 space-y-3 border-t pt-4">
+                          <h5 className="font-medium text-sm text-muted-foreground">
+                            Comments
+                          </h5>
+                          {post.comments.map((comment, index) => (
+                            <div
+                              key={index}
+                              className="flex items-start space-x-3"
+                            >
+                              <div className="w-8 h-8 bg-secondary rounded-full flex items-center justify-center">
+                                <span className="text-secondary-foreground font-medium text-xs">
+                                  {comment.author?.firstName?.charAt(0) || "U"}
+                                </span>
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2">
+                                  <span className="font-medium text-sm">
+                                    {comment.author?.firstName}{" "}
+                                    {comment.author?.lastName}
+                                  </span>
+                                  <span className="text-muted-foreground text-xs">
+                                    {formatTimeAgo(comment.createdAt)}
+                                  </span>
+                                </div>
+                                <p className="text-sm mt-1">
+                                  {comment.content}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
                     {/* Engagement Stats */}
                     <div className="flex items-center space-x-6 mt-4 pt-3 border-t">
                       <button
@@ -214,20 +255,12 @@ function Feed() {
                       </button>
                       <button
                         className="flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors"
-                        onClick={() =>
-                          setActiveCommentPost(
-                            activeCommentPost === post._id ? null : post._id
-                          )
-                        }
+                        onClick={() => toggleComments(post._id)}
                       >
                         <MessageSquare className="h-4 w-4" />
                         <span className="text-sm">
                           {post.commentsCount || 0}
                         </span>
-                      </button>
-                      <button className="flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors">
-                        <Share className="h-4 w-4" />
-                        <span className="text-sm">{post.sharesCount || 0}</span>
                       </button>
                     </div>
 
@@ -249,6 +282,26 @@ function Feed() {
                         </Button>
                       </div>
                     )}
+
+                    {/* Show comment input when comments are expanded */}
+                    {showComments[post._id] &&
+                      activeCommentPost !== post._id && (
+                        <div className="mt-4 flex space-x-2">
+                          <Input
+                            value={commentContent}
+                            onChange={(e) => setCommentContent(e.target.value)}
+                            placeholder="Write a comment..."
+                            className="flex-1"
+                          />
+                          <Button
+                            size="sm"
+                            onClick={() => handleComment(post._id)}
+                            disabled={!commentContent.trim()}
+                          >
+                            Comment
+                          </Button>
+                        </div>
+                      )}
                   </div>
                 </div>
               </CardContent>

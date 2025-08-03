@@ -463,63 +463,6 @@ const deleteComment = async (req, res) => {
 };
 
 /**
- * Share a post
- * @route POST /api/posts/:id/share
- * @access Private
- */
-const sharePost = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { shareComment } = req.body;
-    const userId = req.user._id;
-
-    const post = await Post.findById(id);
-    if (!post) {
-      return res.status(404).json({
-        success: false,
-        message: "Post not found",
-      });
-    }
-
-    // Check if user already shared the post
-    const existingShare = post.shares.find(
-      (share) => share.user.toString() === userId.toString()
-    );
-
-    if (existingShare) {
-      return res.status(400).json({
-        success: false,
-        message: "You have already shared this post",
-      });
-    }
-
-    // Add share
-    post.shares.push({
-      user: userId,
-      shareComment,
-      sharedAt: new Date(),
-    });
-
-    await post.save();
-
-    res.status(200).json({
-      success: true,
-      message: "Post shared successfully",
-      data: {
-        sharesCount: post.shares.length,
-      },
-    });
-  } catch (error) {
-    console.error("Error sharing post:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error sharing post",
-      error: error.message,
-    });
-  }
-};
-
-/**
  * Update post
  * @route PUT /api/posts/:id
  * @access Private (Author only)
@@ -689,7 +632,6 @@ module.exports = {
   toggleLike,
   addComment,
   deleteComment,
-  sharePost,
   updatePost,
   deletePost,
   getMyPosts,

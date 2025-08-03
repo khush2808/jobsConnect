@@ -173,4 +173,99 @@ describe("Resume Upload API Tests", () => {
       expect(response.body.message).toBe("No resume found");
     });
   });
+
+  describe("GET /api/users/resume/download", () => {
+    it("should download resume file successfully", async () => {
+      // First upload a resume
+      const testPdfPath = path.join(__dirname, "..", "test-resume.pdf");
+      const testPdfBuffer = fs.readFileSync(testPdfPath);
+
+      await request(app)
+        .post("/api/users/resume")
+        .set("Cookie", authToken)
+        .attach("resume", testPdfBuffer, "test-resume.pdf");
+
+      // Then try to download the file
+      const response = await request(app)
+        .get("/api/users/resume/download")
+        .set("Cookie", authToken);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.downloadUrl).toBeDefined();
+      expect(response.body.filename).toBeDefined();
+      expect(response.body.downloadUrl).toContain("cloudinary.com");
+    });
+
+    it("should fail without authentication", async () => {
+      const response = await request(app).get("/api/users/resume/download");
+
+      expect(response.status).toBe(401);
+    });
+
+    it("should fail when no resume exists", async () => {
+      // Remove any existing resume first
+      await request(app).delete("/api/users/resume").set("Cookie", authToken);
+
+      const response = await request(app)
+        .get("/api/users/resume/download")
+        .set("Cookie", authToken);
+
+      expect(response.status).toBe(404);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe("No resume found");
+    });
+  });
+
+  describe("Complete Resume Flow", () => {
+    it("should handle complete resume upload and download flow", async () => {
+      // Step 1: Upload resume
+      const testPdfPath = path.join(__dirname, "..", "test-resume.pdf");
+      const testPdfBuffer = fs.readFileSync(testPdfPath);
+
+      const uploadResponse = await request(app)
+        .post("/api/users/resume")
+        .set("Cookie", authToken)
+        .attach("resume", testPdfBuffer, "test-resume.pdf");
+
+      expect(uploadResponse.status).toBe(200);
+      expect(uploadResponse.body.success).toBe(true);
+
+      // Step 2: Get resume info
+      const infoResponse = await request(app)
+        .get("/api/users/resume")
+        .set("Cookie", authToken);
+
+      expect(infoResponse.status).toBe(200);
+      expect(infoResponse.body.success).toBe(true);
+      expect(infoResponse.body.resume.filename).toBeDefined();
+
+      // Step 3: Get download URL
+      const urlResponse = await request(app)
+        .get("/api/users/resume/file")
+        .set("Cookie", authToken);
+
+      expect(urlResponse.status).toBe(200);
+      expect(urlResponse.body.success).toBe(true);
+      expect(urlResponse.body.downloadUrl).toBeDefined();
+
+      // Step 4: Download file directly
+      const downloadResponse = await request(app)
+        .get("/api/users/resume/download")
+        .set("Cookie", authToken);
+
+      expect(downloadResponse.status).toBe(200);
+      expect(downloadResponse.body.success).toBe(true);
+      expect(downloadResponse.body.downloadUrl).toBeDefined();
+      expect(downloadResponse.body.filename).toBeDefined();
+
+      // Step 5: Remove resume
+      const removeResponse = await request(app)
+        .delete("/api/users/resume")
+        .set("Cookie", authToken);
+
+      expect(removeResponse.status).toBe(200);
+      expect(removeResponse.body.success).toBe(true);
+    });
+  });
 });
