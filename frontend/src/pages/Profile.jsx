@@ -313,30 +313,6 @@ function Profile() {
     }
   };
 
-  const handleViewResume = () => {
-    if (!user.resume?.url) {
-      setError("Resume not available for viewing");
-      return;
-    }
-
-    try {
-      // Use the backend endpoint to serve the file
-      const pdfUrl = `${
-        import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
-      }/users/resume/file`;
-
-      // Try to open in new tab
-      const newWindow = window.open(pdfUrl, "_blank");
-      if (!newWindow) {
-        setError("Popup blocked. Please allow popups for this site.");
-      } else {
-        setSuccess("Resume opened in new tab");
-      }
-    } catch (error) {
-      setError("Failed to open resume. Please try again.");
-    }
-  };
-
   if (!user) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -655,14 +631,6 @@ function Profile() {
                       <p className="text-sm text-muted-foreground">
                         {user.resume.filename || "Resume.pdf"}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        Uploaded:{" "}
-                        {user.resume.uploadedAt
-                          ? new Date(
-                              user.resume.uploadedAt
-                            ).toLocaleDateString()
-                          : "Recently"}
-                      </p>
                       <div className="flex space-x-2 mt-2">
                         <Button
                           variant="outline"
@@ -678,90 +646,6 @@ function Profile() {
                         >
                           <Download className="h-4 w-4 mr-2" />
                           Download
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleViewResume}
-                          disabled={isFileLoading}
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          View
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const url = user.resume.url;
-                            // Try to open in iframe or embed
-                            let embedUrl = url;
-                            if (url.includes("cloudinary.com")) {
-                              embedUrl =
-                                url +
-                                (url.includes("?") ? "&" : "?") +
-                                "fl_attachment:false&f_pdf";
-                            }
-                            window.open(embedUrl, "_blank");
-                          }}
-                          disabled={isFileLoading}
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          Direct View
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            // Create an iframe to view PDF
-                            const modal = document.createElement("div");
-                            modal.style.cssText = `
-                              position: fixed;
-                              top: 0;
-                              left: 0;
-                              width: 100%;
-                              height: 100%;
-                              background: rgba(0,0,0,0.8);
-                              z-index: 9999;
-                              display: flex;
-                              justify-content: center;
-                              align-items: center;
-                            `;
-
-                            const iframe = document.createElement("iframe");
-                            iframe.src = user.resume.url;
-                            iframe.style.cssText = `
-                              width: 90%;
-                              height: 90%;
-                              border: none;
-                              border-radius: 8px;
-                            `;
-
-                            const closeBtn = document.createElement("button");
-                            closeBtn.textContent = "×";
-                            closeBtn.style.cssText = `
-                              position: absolute;
-                              top: 20px;
-                              right: 20px;
-                              background: #ff4444;
-                              color: white;
-                              border: none;
-                              border-radius: 50%;
-                              width: 40px;
-                              height: 40px;
-                              font-size: 24px;
-                              cursor: pointer;
-                            `;
-                            closeBtn.onclick = () =>
-                              document.body.removeChild(modal);
-
-                            modal.appendChild(iframe);
-                            modal.appendChild(closeBtn);
-                            document.body.appendChild(modal);
-                          }}
-                          disabled={isFileLoading}
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          Modal View
                         </Button>
                         {isEditing && (
                           <Button

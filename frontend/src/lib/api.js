@@ -12,6 +12,20 @@ const api = axios.create({
   },
 });
 
+//add interceptor for logging all api calls and responses here.
+
+// Request interceptor for logging all api calls and responses here.
+api.interceptors.request.use((config) => {
+  console.log("API Request:", config.method.toUpperCase(), config.url);
+  console.log("API Request Data:", config.data);
+  return config;
+});
+
+api.interceptors.response.use((response) => {
+  console.log("API Response:", response.status, response.config.url);
+  console.log("API Response Data:", response.data);
+  return response;
+});
 // Response interceptor for handling errors
 api.interceptors.response.use(
   (response) => response,
