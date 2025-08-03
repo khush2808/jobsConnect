@@ -189,9 +189,9 @@ function Profile() {
         await dispatch(uploadResume(file));
         setSuccess("Resume uploaded successfully!");
       }
-    } catch (error) {
+    } catch (err) {
       setError(
-        `Failed to upload ${type}. ${error.message || "Please try again."}`
+        `Failed to upload ${type}. ${err.message || "Please try again."}`
       );
     } finally {
       setIsFileLoading(false);
@@ -213,7 +213,7 @@ function Profile() {
         await dispatch(removeResume());
         setSuccess("Resume removed successfully!");
       }
-    } catch (error) {
+    } catch {
       setError(`Failed to remove ${type}. Please try again.`);
     } finally {
       setIsFileLoading(false);
@@ -263,38 +263,38 @@ function Profile() {
     });
   };
 
-  const handleDownloadFile = (url, filename, type) => {
-    if (!url) {
+  const handleDownloadFile = async (url, filename, type) => {
+    if (!url && type !== "Resume") {
       setError(`${type} not available for download`);
       return;
     }
 
-    try {
-      // For Cloudinary URLs, we need special handling
-      if (url.includes("cloudinary.com")) {
-        // For PDFs, use the backend endpoint
-        if (type === "Resume") {
-          const downloadUrl = `${
-            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
-          }/users/resume/file`;
+    setIsFileLoading(true);
+    setError(null);
+    setSuccess(null);
 
-          // Create a temporary link for download
-          const link = document.createElement("a");
-          link.href = downloadUrl;
-          link.download = filename || `${type.toLowerCase()}_${Date.now()}.pdf`;
-          link.target = "_blank";
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          setSuccess(`${type} download started`);
-        } else {
-          // For images, open in new tab
+    try {
+      if (type === "Resume") {
+        // For resumes, use direct download endpoint
+        const downloadUrl = `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/users/resume/download`;
+
+        // Create download link that goes directly to our backend
+        const link = document.createElement("a");
+        link.href = downloadUrl;
+        link.download = filename || "resume.pdf";
+        link.target = "_blank";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setSuccess(`${type} download started`);
+      } else {
+        // For other files (images), use direct URLs
+        if (url && url.includes("cloudinary.com")) {
           window.open(url, "_blank");
           setSuccess(`${type} opened in new tab`);
-        }
-      } else {
-        // For non-Cloudinary URLs, use standard approach
-        if (url.startsWith("http")) {
+        } else if (url && url.startsWith("http")) {
           window.open(url, "_blank");
           setSuccess(`${type} opened in new tab`);
         } else {
@@ -309,7 +309,16 @@ function Profile() {
         }
       }
     } catch (error) {
-      setError(`Failed to download ${type.toLowerCase()}`);
+      console.error("Download error:", error);
+      if (error.response?.status === 404) {
+        setError("Resume not found. Please upload a resume first.");
+      } else if (error.response?.status === 401) {
+        setError("Please log in to download your resume.");
+      } else {
+        setError(`Failed to download ${type.toLowerCase()}. Please try again.`);
+      }
+    } finally {
+      setIsFileLoading(false);
     }
   };
 
@@ -625,7 +634,7 @@ function Profile() {
                         Checking for existing resume
                       </p>
                     </div>
-                  ) : user.resume?.url ? (
+                  ) : user.resume?.filename ? (
                     <div>
                       <h3 className="font-medium">Current Resume</h3>
                       <p className="text-sm text-muted-foreground">
@@ -637,15 +646,24 @@ function Profile() {
                           size="sm"
                           onClick={() =>
                             handleDownloadFile(
-                              user.resume.url,
+                              null,
                               user.resume.filename,
                               "Resume"
                             )
                           }
                           disabled={isFileLoading}
                         >
-                          <Download className="h-4 w-4 mr-2" />
-                          Download
+                          {isFileLoading ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                              Generating...
+                            </>
+                          ) : (
+                            <>
+                              <Download className="h-4 w-4 mr-2" />
+                              Download
+                            </>
+                          )}
                         </Button>
                         {isEditing && (
                           <Button
@@ -657,11 +675,6 @@ function Profile() {
                             <Trash2 className="h-4 w-4 mr-2" />
                             Remove
                           </Button>
-                        )}
-                        {isFileLoading && (
-                          <span className="text-xs text-muted-foreground flex items-center">
-                            Processing...
-                          </span>
                         )}
                       </div>
                     </div>
@@ -934,7 +947,7 @@ function Profile() {
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Resume</span>
                 <span className="font-medium">
-                  {user.resume?.url ? "Uploaded" : "Not added yet"}
+                  {user.resume?.filename ? "Uploaded" : "Not added yet"}
                 </span>
               </div>
             </CardContent>
