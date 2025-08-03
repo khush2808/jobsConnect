@@ -43,7 +43,8 @@ const corsOptions = {
   origin: [
     "http://localhost:5173",
     "http://localhost:3000",
-    "https://rizeos-app.vercel.app/",
+    "https://rizeos-app.vercel.app",
+    "https://rizeos-preview.vercel.app",
   ],
   credentials: true,
   optionsSuccessStatus: 200,
