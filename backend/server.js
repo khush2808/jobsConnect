@@ -14,7 +14,6 @@ const userRoutes = require("./routes/userRoutes");
 const jobRoutes = require("./routes/jobRoutes");
 const postRoutes = require("./routes/postRoutes");
 const aiRoutes = require("./routes/aiRoutes");
-const testRoutes = require("./test-endpoint");
 
 // Import middleware
 const errorHandler = require("./middleware/errorHandler");
@@ -41,7 +40,11 @@ app.use(compression());
 
 // CORS configuration
 const corsOptions = {
-  origin: ["http://localhost:5173", "http://localhost:3000"],
+  origin: [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://rizeos-app.vercel.app/",
+  ],
   credentials: true,
   optionsSuccessStatus: 200,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -86,7 +89,6 @@ app.use("/api/users", userRoutes);
 app.use("/api/jobs", jobRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/ai", aiRoutes);
-app.use("/api/test", testRoutes);
 
 // Error handling middleware
 app.use(notFound);

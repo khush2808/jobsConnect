@@ -157,12 +157,6 @@ function Profile() {
     const file = event.target.files[0];
     if (!file) return;
 
-    console.log(`Uploading ${type}:`, {
-      name: file.name,
-      type: file.type,
-      size: file.size,
-    });
-
     // Validate file type
     if (type === "resume" && file.type !== "application/pdf") {
       setError("Please upload a PDF file for resume");
@@ -188,19 +182,14 @@ function Profile() {
     setSuccess(null);
 
     try {
-      console.log(`Starting ${type} upload...`);
-
       if (type === "profile-picture") {
-        const result = await dispatch(uploadProfilePicture(file));
-        console.log("Profile picture upload result:", result);
+        await dispatch(uploadProfilePicture(file));
         setSuccess("Profile picture uploaded successfully!");
       } else if (type === "resume") {
-        const result = await dispatch(uploadResume(file));
-        console.log("Resume upload result:", result);
+        await dispatch(uploadResume(file));
         setSuccess("Resume uploaded successfully!");
       }
     } catch (error) {
-      console.error(`Upload error for ${type}:`, error);
       setError(
         `Failed to upload ${type}. ${error.message || "Please try again."}`
       );
@@ -281,8 +270,6 @@ function Profile() {
     }
 
     try {
-      console.log(`Downloading ${type}:`, url);
-
       // For Cloudinary URLs, we need special handling
       if (url.includes("cloudinary.com")) {
         // For PDFs, use the backend endpoint
@@ -322,7 +309,6 @@ function Profile() {
         }
       }
     } catch (error) {
-      console.error(`Download error for ${type}:`, error);
       setError(`Failed to download ${type.toLowerCase()}`);
     }
   };
@@ -334,8 +320,6 @@ function Profile() {
     }
 
     try {
-      console.log("Attempting to view resume:", user.resume.url);
-
       // Use the backend endpoint to serve the file
       const pdfUrl = `${
         import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
@@ -349,12 +333,9 @@ function Profile() {
         setSuccess("Resume opened in new tab");
       }
     } catch (error) {
-      console.error("View resume error:", error);
       setError("Failed to open resume. Please try again.");
     }
   };
-
-
 
   if (!user) {
     return (
@@ -382,36 +363,6 @@ function Profile() {
             <Edit className="h-4 w-4 mr-2" />
             {isEditing ? "Cancel" : "Edit Profile"}
           </Button>
-          {process.env.NODE_ENV === "development" && (
-            <>
-              <Button
-                onClick={handleTestResumeUpload}
-                variant="outline"
-                size="sm"
-                disabled={isFileLoading}
-              >
-                Test Resume
-              </Button>
-              <Button
-                onClick={handleTestProfilePictureUpload}
-                variant="outline"
-                size="sm"
-                disabled={isFileLoading}
-              >
-                Test Image
-              </Button>
-              <Button onClick={handleTestBackend} variant="outline" size="sm">
-                Test Backend
-              </Button>
-              <Button
-                onClick={handleTestUploadEndpoint}
-                variant="outline"
-                size="sm"
-              >
-                Test Upload
-              </Button>
-            </>
-          )}
         </div>
       </div>
 
@@ -470,36 +421,33 @@ function Profile() {
                   )}
                   {isEditing && (
                     <div className="absolute -bottom-2 -right-2 flex space-x-1">
-                      <label className="cursor-pointer">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            console.log(
-                              "Profile picture file selected:",
-                              e.target.files[0]
-                            );
-                            handleFileUpload(e, "profile-picture");
-                          }}
-                          className="hidden"
-                          disabled={isFileLoading}
-                        />
-                        <Button
-                          size="sm"
-                          className="h-6 w-6 p-0 bg-primary hover:bg-primary/90"
-                          disabled={isFileLoading}
-                          title="Upload profile picture"
-                          onClick={() =>
-                            console.log("Profile picture upload button clicked")
-                          }
-                        >
-                          {isFileLoading ? (
-                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-                          ) : (
-                            <Upload className="h-3 w-3" />
-                          )}
-                        </Button>
-                      </label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          handleFileUpload(e, "profile-picture");
+                        }}
+                        className="hidden"
+                        disabled={isFileLoading}
+                        id="profile-picture-input"
+                      />
+                      <Button
+                        size="sm"
+                        className="h-6 w-6 p-0 bg-primary hover:bg-primary/90"
+                        disabled={isFileLoading}
+                        title="Upload profile picture"
+                        onClick={() => {
+                          document
+                            .getElementById("profile-picture-input")
+                            .click();
+                        }}
+                      >
+                        {isFileLoading ? (
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                        ) : (
+                          <Upload className="h-3 w-3" />
+                        )}
+                      </Button>
                       {user.profilePicture && (
                         <Button
                           size="sm"
@@ -745,7 +693,6 @@ function Profile() {
                           size="sm"
                           onClick={() => {
                             const url = user.resume.url;
-                            console.log("Direct PDF URL:", url);
                             // Try to open in iframe or embed
                             let embedUrl = url;
                             if (url.includes("cloudinary.com")) {
@@ -1121,48 +1068,6 @@ function Profile() {
                   <Save className="h-4 w-4 mr-2" />
                   {isUpdating ? "Saving..." : "Save Changes"}
                 </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Debug Info (Development Only) */}
-          {process.env.NODE_ENV === "development" && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Debug Info</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-xs">
-                <div>
-                  <strong>User ID:</strong> {user?._id}
-                </div>
-                <div>
-                  <strong>Resume:</strong>{" "}
-                  {user?.resume ? "Uploaded" : "Not uploaded"}
-                </div>
-                <div>
-                  <strong>Profile Picture:</strong>{" "}
-                  {user?.profilePicture ? "Uploaded" : "Not uploaded"}
-                </div>
-                <div>
-                  <strong>File Loading:</strong> {isFileLoading ? "Yes" : "No"}
-                </div>
-                <div>
-                  <strong>Resume Loading:</strong>{" "}
-                  {isResumeLoading ? "Yes" : "No"}
-                </div>
-                <div>
-                  <strong>API Base URL:</strong>{" "}
-                  {import.meta.env.VITE_API_BASE_URL ||
-                    "http://localhost:5000/api"}
-                </div>
-                <div>
-                  <strong>Resume URL:</strong>{" "}
-                  {user?.resume?.url ? "Available" : "Not available"}
-                </div>
-                <div>
-                  <strong>Profile Picture URL:</strong>{" "}
-                  {user?.profilePicture?.url ? "Available" : "Not available"}
-                </div>
               </CardContent>
             </Card>
           )}
