@@ -18,7 +18,7 @@ import {
   CardDescription,
   CardContent,
 } from "../components/ui/Card";
-import { createTestPDF, createTestImage } from "../utils/uploadTest";
+
 import {
   User,
   MapPin,
@@ -157,6 +157,12 @@ function Profile() {
     const file = event.target.files[0];
     if (!file) return;
 
+    console.log(`Uploading ${type}:`, {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+    });
+
     // Validate file type
     if (type === "resume" && file.type !== "application/pdf") {
       setError("Please upload a PDF file for resume");
@@ -182,11 +188,15 @@ function Profile() {
     setSuccess(null);
 
     try {
+      console.log(`Starting ${type} upload...`);
+
       if (type === "profile-picture") {
-        await dispatch(uploadProfilePicture(file));
+        const result = await dispatch(uploadProfilePicture(file));
+        console.log("Profile picture upload result:", result);
         setSuccess("Profile picture uploaded successfully!");
       } else if (type === "resume") {
-        await dispatch(uploadResume(file));
+        const result = await dispatch(uploadResume(file));
+        console.log("Resume upload result:", result);
         setSuccess("Resume uploaded successfully!");
       }
     } catch (error) {
@@ -271,21 +281,45 @@ function Profile() {
     }
 
     try {
-      // For external URLs, we need to handle CORS
-      if (url.startsWith("http")) {
-        // Open in new tab for external URLs
-        window.open(url, "_blank");
-        setSuccess(`${type} opened in new tab`);
+      console.log(`Downloading ${type}:`, url);
+
+      // For Cloudinary URLs, we need special handling
+      if (url.includes("cloudinary.com")) {
+        // For PDFs, use the backend endpoint
+        if (type === "Resume") {
+          const downloadUrl = `${
+            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+          }/users/resume/file`;
+
+          // Create a temporary link for download
+          const link = document.createElement("a");
+          link.href = downloadUrl;
+          link.download = filename || `${type.toLowerCase()}_${Date.now()}.pdf`;
+          link.target = "_blank";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          setSuccess(`${type} download started`);
+        } else {
+          // For images, open in new tab
+          window.open(url, "_blank");
+          setSuccess(`${type} opened in new tab`);
+        }
       } else {
-        // For local files, use download link
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = filename || `${type.toLowerCase()}_${Date.now()}`;
-        link.target = "_blank";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setSuccess(`${type} download started`);
+        // For non-Cloudinary URLs, use standard approach
+        if (url.startsWith("http")) {
+          window.open(url, "_blank");
+          setSuccess(`${type} opened in new tab`);
+        } else {
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = filename || `${type.toLowerCase()}_${Date.now()}`;
+          link.target = "_blank";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          setSuccess(`${type} download started`);
+        }
       }
     } catch (error) {
       console.error(`Download error for ${type}:`, error);
@@ -300,8 +334,15 @@ function Profile() {
     }
 
     try {
-      // Open resume in new tab
-      const newWindow = window.open(user.resume.url, "_blank");
+      console.log("Attempting to view resume:", user.resume.url);
+
+      // Use the backend endpoint to serve the file
+      const pdfUrl = `${
+        import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+      }/users/resume/file`;
+
+      // Try to open in new tab
+      const newWindow = window.open(pdfUrl, "_blank");
       if (!newWindow) {
         setError("Popup blocked. Please allow popups for this site.");
       } else {
@@ -313,28 +354,7 @@ function Profile() {
     }
   };
 
-  // Test functions for development
-  const handleTestResumeUpload = async () => {
-    try {
-      const testFile = createTestPDF();
-      const event = { target: { files: [testFile] } };
-      await handleFileUpload(event, "resume");
-    } catch (error) {
-      console.error("Test resume upload failed:", error);
-      setError("Test resume upload failed");
-    }
-  };
 
-  const handleTestProfilePictureUpload = async () => {
-    try {
-      const testFile = await createTestImage();
-      const event = { target: { files: [testFile] } };
-      await handleFileUpload(event, "profile-picture");
-    } catch (error) {
-      console.error("Test profile picture upload failed:", error);
-      setError("Test profile picture upload failed");
-    }
-  };
 
   if (!user) {
     return (
@@ -379,6 +399,16 @@ function Profile() {
                 disabled={isFileLoading}
               >
                 Test Image
+              </Button>
+              <Button onClick={handleTestBackend} variant="outline" size="sm">
+                Test Backend
+              </Button>
+              <Button
+                onClick={handleTestUploadEndpoint}
+                variant="outline"
+                size="sm"
+              >
+                Test Upload
               </Button>
             </>
           )}
@@ -444,9 +474,13 @@ function Profile() {
                         <input
                           type="file"
                           accept="image/*"
-                          onChange={(e) =>
-                            handleFileUpload(e, "profile-picture")
-                          }
+                          onChange={(e) => {
+                            console.log(
+                              "Profile picture file selected:",
+                              e.target.files[0]
+                            );
+                            handleFileUpload(e, "profile-picture");
+                          }}
                           className="hidden"
                           disabled={isFileLoading}
                         />
@@ -455,6 +489,9 @@ function Profile() {
                           className="h-6 w-6 p-0 bg-primary hover:bg-primary/90"
                           disabled={isFileLoading}
                           title="Upload profile picture"
+                          onClick={() =>
+                            console.log("Profile picture upload button clicked")
+                          }
                         >
                           {isFileLoading ? (
                             <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
@@ -702,6 +739,82 @@ function Profile() {
                         >
                           <Eye className="h-4 w-4 mr-2" />
                           View
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const url = user.resume.url;
+                            console.log("Direct PDF URL:", url);
+                            // Try to open in iframe or embed
+                            let embedUrl = url;
+                            if (url.includes("cloudinary.com")) {
+                              embedUrl =
+                                url +
+                                (url.includes("?") ? "&" : "?") +
+                                "fl_attachment:false&f_pdf";
+                            }
+                            window.open(embedUrl, "_blank");
+                          }}
+                          disabled={isFileLoading}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Direct View
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            // Create an iframe to view PDF
+                            const modal = document.createElement("div");
+                            modal.style.cssText = `
+                              position: fixed;
+                              top: 0;
+                              left: 0;
+                              width: 100%;
+                              height: 100%;
+                              background: rgba(0,0,0,0.8);
+                              z-index: 9999;
+                              display: flex;
+                              justify-content: center;
+                              align-items: center;
+                            `;
+
+                            const iframe = document.createElement("iframe");
+                            iframe.src = user.resume.url;
+                            iframe.style.cssText = `
+                              width: 90%;
+                              height: 90%;
+                              border: none;
+                              border-radius: 8px;
+                            `;
+
+                            const closeBtn = document.createElement("button");
+                            closeBtn.textContent = "×";
+                            closeBtn.style.cssText = `
+                              position: absolute;
+                              top: 20px;
+                              right: 20px;
+                              background: #ff4444;
+                              color: white;
+                              border: none;
+                              border-radius: 50%;
+                              width: 40px;
+                              height: 40px;
+                              font-size: 24px;
+                              cursor: pointer;
+                            `;
+                            closeBtn.onclick = () =>
+                              document.body.removeChild(modal);
+
+                            modal.appendChild(iframe);
+                            modal.appendChild(closeBtn);
+                            document.body.appendChild(modal);
+                          }}
+                          disabled={isFileLoading}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          Modal View
                         </Button>
                         {isEditing && (
                           <Button
@@ -1041,6 +1154,14 @@ function Profile() {
                   <strong>API Base URL:</strong>{" "}
                   {import.meta.env.VITE_API_BASE_URL ||
                     "http://localhost:5000/api"}
+                </div>
+                <div>
+                  <strong>Resume URL:</strong>{" "}
+                  {user?.resume?.url ? "Available" : "Not available"}
+                </div>
+                <div>
+                  <strong>Profile Picture URL:</strong>{" "}
+                  {user?.profilePicture?.url ? "Available" : "Not available"}
                 </div>
               </CardContent>
             </Card>
