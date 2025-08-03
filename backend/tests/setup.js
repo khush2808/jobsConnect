@@ -33,13 +33,14 @@ jest.mock("cloudinary", () => ({
 jest.mock("multer", () => {
   const multer = jest.fn(() => ({
     single: jest.fn((fieldName) => (req, res, next) => {
+      // Default case - PDF file
       req.file = {
         fieldname: fieldName,
-        originalname: "test-file.jpg",
+        originalname: "test-file.pdf",
         encoding: "7bit",
-        mimetype: "image/jpeg",
-        buffer: Buffer.from("fake-image-data"),
-        size: 1024,
+        mimetype: "application/pdf",
+        buffer: Buffer.from("fake-pdf-data"),
+        size: 13,
       };
       next();
     }),
@@ -50,11 +51,11 @@ jest.mock("multer", () => {
     _handleFile: jest.fn((req, file, cb) => {
       req.file = {
         fieldname: file.fieldname,
-        originalname: file.originalname,
+        originalname: file.originalname || "test-file.pdf",
         encoding: "7bit",
-        mimetype: file.mimetype,
-        buffer: Buffer.from("fake-file-data"),
-        size: 1024,
+        mimetype: file.mimetype || "application/pdf",
+        buffer: file.buffer || Buffer.from("fake-pdf-data"),
+        size: file.buffer ? file.buffer.length : 1024,
       };
       cb(null, req.file);
     }),
@@ -65,11 +66,11 @@ jest.mock("multer", () => {
     _handleFile: jest.fn((req, file, cb) => {
       req.file = {
         fieldname: file.fieldname,
-        originalname: file.originalname,
+        originalname: file.originalname || "test-file.pdf",
         encoding: "7bit",
-        mimetype: file.mimetype,
-        buffer: Buffer.from("fake-file-data"),
-        size: 1024,
+        mimetype: file.mimetype || "application/pdf",
+        buffer: file.buffer || Buffer.from("fake-pdf-data"),
+        size: file.buffer ? file.buffer.length : 1024,
       };
       cb(null, req.file);
     }),
