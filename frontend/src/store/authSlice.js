@@ -124,7 +124,7 @@ export const uploadProfilePicture = createAsyncThunk(
     try {
       const formData = new FormData();
       formData.append("profilePicture", file);
-      
+
       const response = await api.post("/users/profile-picture", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
@@ -132,9 +132,12 @@ export const uploadProfilePicture = createAsyncThunk(
       });
       return response.data.profilePicture;
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to upload profile picture"
-      );
+      console.error("Profile picture upload error:", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to upload profile picture";
+      return rejectWithValue(errorMessage);
     }
   }
 );
@@ -145,7 +148,7 @@ export const uploadResume = createAsyncThunk(
     try {
       const formData = new FormData();
       formData.append("resume", file);
-      
+
       const response = await api.post("/users/resume", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
@@ -153,9 +156,12 @@ export const uploadResume = createAsyncThunk(
       });
       return response.data.resume;
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to upload resume"
-      );
+      console.error("Resume upload error:", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to upload resume";
+      return rejectWithValue(errorMessage);
     }
   }
 );
@@ -183,6 +189,20 @@ export const removeResume = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to remove resume"
+      );
+    }
+  }
+);
+
+export const getResume = createAsyncThunk(
+  "auth/getResume",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.get("/users/resume");
+      return response.data.resume;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to get resume"
       );
     }
   }
@@ -400,6 +420,21 @@ const authSlice = createSlice({
         state.error = null;
       })
       .addCase(removeResume.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+
+      // Get Resume
+      .addCase(getResume.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(getResume.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = { ...state.user, resume: action.payload };
+        state.error = null;
+      })
+      .addCase(getResume.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
       });

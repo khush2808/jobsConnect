@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { 
-  updateUserProfile, 
-  uploadProfilePicture, 
-  uploadResume, 
-  removeProfilePicture, 
-  removeResume 
+import {
+  updateUserProfile,
+  uploadProfilePicture,
+  uploadResume,
+  removeProfilePicture,
+  removeResume,
+  getResume,
 } from "../store/authSlice";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
+import { FileUpload } from "../components/ui/FileUpload";
 import {
   Card,
   CardHeader,
@@ -16,6 +18,7 @@ import {
   CardDescription,
   CardContent,
 } from "../components/ui/Card";
+import { createTestPDF, createTestImage } from "../utils/uploadTest";
 import {
   User,
   MapPin,
@@ -31,6 +34,8 @@ import {
   FileText,
   Mail,
   Phone,
+  Download,
+  Eye,
 } from "lucide-react";
 
 function Profile() {
@@ -38,10 +43,21 @@ function Profile() {
   const { user } = useSelector((state) => state.auth);
 
   const [isEditing, setIsEditing] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isFileLoading, setIsFileLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isResumeLoading, setIsResumeLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+
+  // Auto-dismiss success messages after 5 seconds
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => {
+        setSuccess(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
 
   const [profileData, setProfileData] = useState({
     firstName: "",
@@ -55,7 +71,7 @@ function Profile() {
       country: "",
     },
     jobPreferences: {
-      desiredRoles: [],
+      roles: [], // Changed from desiredRoles to match backend
       preferredLocation: "",
       salaryExpectation: {
         min: "",
@@ -83,15 +99,33 @@ function Profile() {
         phone: user.phone || "",
         bio: user.bio || "",
         location: user.location || { city: "", state: "", country: "" },
-        jobPreferences: user.jobPreferences || {
-          desiredRoles: [],
-          preferredLocation: "",
-          salaryExpectation: { min: "", max: "", currency: "USD" },
+        jobPreferences: {
+          roles: user.jobPreferences?.roles || [], // Use roles instead of desiredRoles
+          preferredLocation: user.jobPreferences?.preferredLocation || "",
+          salaryExpectation: user.jobPreferences?.salaryExpectation || {
+            min: "",
+            max: "",
+            currency: "USD",
+          },
         },
         skills: user.skills || [],
       });
     }
   }, [user]);
+
+  // Fetch resume data when component loads
+  useEffect(() => {
+    if (user && !user.resume) {
+      setIsResumeLoading(true);
+      dispatch(getResume())
+        .catch(() => {
+          // Silently fail if resume doesn't exist
+        })
+        .finally(() => {
+          setIsResumeLoading(false);
+        });
+    }
+  }, [user, dispatch]);
 
   const handleProfileUpdate = async () => {
     setIsUpdating(true);
@@ -99,7 +133,17 @@ function Profile() {
     setSuccess(null);
 
     try {
-      await dispatch(updateUserProfile(profileData));
+      // Transform the data to match backend expectations
+      const updateData = {
+        ...profileData,
+        jobPreferences: {
+          roles: profileData.jobPreferences.roles, // Keep as roles for backend
+          remoteWork: profileData.jobPreferences.preferredLocation, // Map to remoteWork
+          salaryRange: profileData.jobPreferences.salaryExpectation, // Map to salaryRange
+        },
+      };
+
+      await dispatch(updateUserProfile(updateData));
       setSuccess("Profile updated successfully!");
       setIsEditing(false);
     } catch (error) {
@@ -113,7 +157,27 @@ function Profile() {
     const file = event.target.files[0];
     if (!file) return;
 
-    setIsLoading(true);
+    // Validate file type
+    if (type === "resume" && file.type !== "application/pdf") {
+      setError("Please upload a PDF file for resume");
+      return;
+    }
+
+    if (type === "profile-picture" && !file.type.startsWith("image/")) {
+      setError("Please upload an image file for profile picture");
+      return;
+    }
+
+    // Validate file size (10MB for resume, 5MB for images)
+    const maxSize = type === "resume" ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setError(
+        `File size too large. Maximum size: ${maxSize / (1024 * 1024)}MB`
+      );
+      return;
+    }
+
+    setIsFileLoading(true);
     setError(null);
     setSuccess(null);
 
@@ -126,14 +190,19 @@ function Profile() {
         setSuccess("Resume uploaded successfully!");
       }
     } catch (error) {
-      setError(`Failed to upload ${type}. Please try again.`);
+      console.error(`Upload error for ${type}:`, error);
+      setError(
+        `Failed to upload ${type}. ${error.message || "Please try again."}`
+      );
     } finally {
-      setIsLoading(false);
+      setIsFileLoading(false);
+      // Clear the file input
+      event.target.value = "";
     }
   };
 
   const handleRemoveFile = async (type) => {
-    setIsLoading(true);
+    setIsFileLoading(true);
     setError(null);
     setSuccess(null);
 
@@ -148,7 +217,7 @@ function Profile() {
     } catch (error) {
       setError(`Failed to remove ${type}. Please try again.`);
     } finally {
-      setIsLoading(false);
+      setIsFileLoading(false);
     }
   };
 
@@ -157,7 +226,7 @@ function Profile() {
 
     setProfileData({
       ...profileData,
-      skills: [...profileData.skills, { ...newSkill }],
+      skills: [...(profileData.skills || []), { ...newSkill }],
     });
     setNewSkill({ name: "", proficiency: "Intermediate", experience: 1 });
   };
@@ -165,7 +234,7 @@ function Profile() {
   const handleRemoveSkill = (index) => {
     setProfileData({
       ...profileData,
-      skills: profileData.skills.filter((_, i) => i !== index),
+      skills: (profileData.skills || []).filter((_, i) => i !== index),
     });
   };
 
@@ -176,7 +245,7 @@ function Profile() {
       ...profileData,
       jobPreferences: {
         ...profileData.jobPreferences,
-        desiredRoles: [...profileData.jobPreferences.desiredRoles, newRole],
+        roles: [...(profileData.jobPreferences.roles || []), newRole], // Use roles instead of desiredRoles
       },
     });
     setNewRole("");
@@ -187,11 +256,84 @@ function Profile() {
       ...profileData,
       jobPreferences: {
         ...profileData.jobPreferences,
-        desiredRoles: profileData.jobPreferences.desiredRoles.filter(
+        roles: (profileData.jobPreferences.roles || []).filter(
+          // Use roles instead of desiredRoles
           (_, i) => i !== index
         ),
       },
     });
+  };
+
+  const handleDownloadFile = (url, filename, type) => {
+    if (!url) {
+      setError(`${type} not available for download`);
+      return;
+    }
+
+    try {
+      // For external URLs, we need to handle CORS
+      if (url.startsWith("http")) {
+        // Open in new tab for external URLs
+        window.open(url, "_blank");
+        setSuccess(`${type} opened in new tab`);
+      } else {
+        // For local files, use download link
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename || `${type.toLowerCase()}_${Date.now()}`;
+        link.target = "_blank";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setSuccess(`${type} download started`);
+      }
+    } catch (error) {
+      console.error(`Download error for ${type}:`, error);
+      setError(`Failed to download ${type.toLowerCase()}`);
+    }
+  };
+
+  const handleViewResume = () => {
+    if (!user.resume?.url) {
+      setError("Resume not available for viewing");
+      return;
+    }
+
+    try {
+      // Open resume in new tab
+      const newWindow = window.open(user.resume.url, "_blank");
+      if (!newWindow) {
+        setError("Popup blocked. Please allow popups for this site.");
+      } else {
+        setSuccess("Resume opened in new tab");
+      }
+    } catch (error) {
+      console.error("View resume error:", error);
+      setError("Failed to open resume. Please try again.");
+    }
+  };
+
+  // Test functions for development
+  const handleTestResumeUpload = async () => {
+    try {
+      const testFile = createTestPDF();
+      const event = { target: { files: [testFile] } };
+      await handleFileUpload(event, "resume");
+    } catch (error) {
+      console.error("Test resume upload failed:", error);
+      setError("Test resume upload failed");
+    }
+  };
+
+  const handleTestProfilePictureUpload = async () => {
+    try {
+      const testFile = await createTestImage();
+      const event = { target: { files: [testFile] } };
+      await handleFileUpload(event, "profile-picture");
+    } catch (error) {
+      console.error("Test profile picture upload failed:", error);
+      setError("Test profile picture upload failed");
+    }
   };
 
   if (!user) {
@@ -212,13 +354,35 @@ function Profile() {
             Manage your professional profile and preferences
           </p>
         </div>
-        <Button
-          onClick={() => setIsEditing(!isEditing)}
-          variant={isEditing ? "outline" : "default"}
-        >
-          <Edit className="h-4 w-4 mr-2" />
-          {isEditing ? "Cancel" : "Edit Profile"}
-        </Button>
+        <div className="flex space-x-2">
+          <Button
+            onClick={() => setIsEditing(!isEditing)}
+            variant={isEditing ? "outline" : "default"}
+          >
+            <Edit className="h-4 w-4 mr-2" />
+            {isEditing ? "Cancel" : "Edit Profile"}
+          </Button>
+          {process.env.NODE_ENV === "development" && (
+            <>
+              <Button
+                onClick={handleTestResumeUpload}
+                variant="outline"
+                size="sm"
+                disabled={isFileLoading}
+              >
+                Test Resume
+              </Button>
+              <Button
+                onClick={handleTestProfilePictureUpload}
+                variant="outline"
+                size="sm"
+                disabled={isFileLoading}
+              >
+                Test Image
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Success/Error Messages */}
@@ -237,6 +401,12 @@ function Profile() {
           <CardContent className="p-4">
             <div className="text-center text-destructive">
               <p className="font-medium">{error}</p>
+              <button
+                onClick={() => setError(null)}
+                className="mt-2 text-sm underline hover:no-underline"
+              >
+                Dismiss
+              </button>
             </div>
           </CardContent>
         </Card>
@@ -274,11 +444,23 @@ function Profile() {
                         <input
                           type="file"
                           accept="image/*"
-                          onChange={(e) => handleFileUpload(e, "profile-picture")}
+                          onChange={(e) =>
+                            handleFileUpload(e, "profile-picture")
+                          }
                           className="hidden"
+                          disabled={isFileLoading}
                         />
-                        <Button size="sm" className="h-6 w-6 p-0">
-                          <Upload className="h-3 w-3" />
+                        <Button
+                          size="sm"
+                          className="h-6 w-6 p-0 bg-primary hover:bg-primary/90"
+                          disabled={isFileLoading}
+                          title="Upload profile picture"
+                        >
+                          {isFileLoading ? (
+                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                          ) : (
+                            <Upload className="h-3 w-3" />
+                          )}
                         </Button>
                       </label>
                       {user.profilePicture && (
@@ -287,6 +469,7 @@ function Profile() {
                           variant="destructive"
                           className="h-6 w-6 p-0"
                           onClick={() => handleRemoveFile("profile-picture")}
+                          title="Remove profile picture"
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
@@ -302,6 +485,30 @@ function Profile() {
                   <p className="text-sm text-muted-foreground capitalize">
                     {user.accountType?.replace("_", " ")}
                   </p>
+                  {user.profilePicture && (
+                    <div className="flex space-x-2 mt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          handleDownloadFile(
+                            user.profilePicture.url,
+                            "profile_picture.jpg",
+                            "Profile Picture"
+                          )
+                        }
+                        disabled={isFileLoading}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Download
+                      </Button>
+                      {isFileLoading && (
+                        <span className="text-xs text-muted-foreground flex items-center">
+                          Processing...
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -313,7 +520,10 @@ function Profile() {
                     type="text"
                     value={profileData.firstName}
                     onChange={(e) =>
-                      setProfileData({ ...profileData, firstName: e.target.value })
+                      setProfileData({
+                        ...profileData,
+                        firstName: e.target.value,
+                      })
                     }
                     placeholder="First Name"
                     disabled={!isEditing}
@@ -325,7 +535,10 @@ function Profile() {
                     type="text"
                     value={profileData.lastName}
                     onChange={(e) =>
-                      setProfileData({ ...profileData, lastName: e.target.value })
+                      setProfileData({
+                        ...profileData,
+                        lastName: e.target.value,
+                      })
                     }
                     placeholder="Last Name"
                     disabled={!isEditing}
@@ -436,9 +649,7 @@ function Profile() {
           <Card>
             <CardHeader>
               <CardTitle>Resume</CardTitle>
-              <CardDescription>
-                Upload your resume (PDF format)
-              </CardDescription>
+              <CardDescription>Upload your resume (PDF format)</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center space-x-4">
@@ -446,47 +657,92 @@ function Profile() {
                   <FileText className="h-8 w-8 text-secondary-foreground" />
                 </div>
                 <div className="flex-1">
-                  {user.resume ? (
+                  {isResumeLoading ? (
+                    <div>
+                      <h3 className="font-medium">Loading resume...</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Checking for existing resume
+                      </p>
+                    </div>
+                  ) : user.resume?.url ? (
                     <div>
                       <h3 className="font-medium">Current Resume</h3>
                       <p className="text-sm text-muted-foreground">
-                        {user.resume.filename}
+                        {user.resume.filename || "Resume.pdf"}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Uploaded: {new Date(user.resume.uploadedAt).toLocaleDateString()}
+                        Uploaded:{" "}
+                        {user.resume.uploadedAt
+                          ? new Date(
+                              user.resume.uploadedAt
+                            ).toLocaleDateString()
+                          : "Recently"}
                       </p>
-                    </div>
-                  ) : (
-                    <div>
-                      <h3 className="font-medium">No Resume Uploaded</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Upload your resume to increase your chances
-                      </p>
-                    </div>
-                  )}
-                  {isEditing && (
-                    <div className="flex space-x-2 mt-2">
-                      <label className="cursor-pointer">
-                        <input
-                          type="file"
-                          accept=".pdf"
-                          onChange={(e) => handleFileUpload(e, "resume")}
-                          className="hidden"
-                        />
-                        <Button variant="outline" size="sm">
-                          <Upload className="h-4 w-4 mr-2" />
-                          Upload
-                        </Button>
-                      </label>
-                      {user.resume && (
+                      <div className="flex space-x-2 mt-2">
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleRemoveFile("resume")}
+                          onClick={() =>
+                            handleDownloadFile(
+                              user.resume.url,
+                              user.resume.filename,
+                              "Resume"
+                            )
+                          }
+                          disabled={isFileLoading}
                         >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Remove
+                          <Download className="h-4 w-4 mr-2" />
+                          Download
                         </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleViewResume}
+                          disabled={isFileLoading}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          View
+                        </Button>
+                        {isEditing && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRemoveFile("resume")}
+                            disabled={isFileLoading}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Remove
+                          </Button>
+                        )}
+                        {isFileLoading && (
+                          <span className="text-xs text-muted-foreground flex items-center">
+                            Processing...
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <h3 className="font-medium">Resume Not Added Yet</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Upload your resume to increase your chances of getting
+                        hired
+                      </p>
+                      {isEditing && (
+                        <div className="mt-4">
+                          <FileUpload
+                            onFileSelect={(file) => {
+                              if (file) {
+                                const event = { target: { files: [file] } };
+                                handleFileUpload(event, "resume");
+                              }
+                            }}
+                            accept=".pdf"
+                            maxSize={10 * 1024 * 1024} // 10MB
+                            fileType="pdf"
+                            disabled={isFileLoading}
+                          />
+                        </div>
                       )}
                     </div>
                   )}
@@ -555,7 +811,7 @@ function Profile() {
               )}
 
               <div className="flex flex-wrap gap-2">
-                {profileData.skills.map((skill, index) => (
+                {(profileData.skills || []).map((skill, index) => (
                   <div
                     key={index}
                     className="flex items-center space-x-2 px-3 py-1 bg-secondary rounded-full"
@@ -604,7 +860,7 @@ function Profile() {
                   </div>
                 )}
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {profileData.jobPreferences.desiredRoles.map(
+                  {(profileData.jobPreferences.roles || []).map(
                     (role, index) => (
                       <div
                         key={index}
@@ -711,14 +967,16 @@ function Profile() {
             <CardContent className="space-y-4">
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Skills</span>
-                <span className="font-medium">{profileData.skills.length}</span>
+                <span className="font-medium">
+                  {profileData.skills?.length || 0}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">
                   Desired Roles
                 </span>
                 <span className="font-medium">
-                  {profileData.jobPreferences.desiredRoles.length}
+                  {profileData.jobPreferences.roles?.length || 0}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -730,11 +988,9 @@ function Profile() {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">
-                  Resume
-                </span>
+                <span className="text-sm text-muted-foreground">Resume</span>
                 <span className="font-medium">
-                  {user.resume ? "Uploaded" : "Not uploaded"}
+                  {user.resume?.url ? "Uploaded" : "Not added yet"}
                 </span>
               </div>
             </CardContent>
@@ -752,6 +1008,40 @@ function Profile() {
                   <Save className="h-4 w-4 mr-2" />
                   {isUpdating ? "Saving..." : "Save Changes"}
                 </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Debug Info (Development Only) */}
+          {process.env.NODE_ENV === "development" && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Debug Info</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-xs">
+                <div>
+                  <strong>User ID:</strong> {user?._id}
+                </div>
+                <div>
+                  <strong>Resume:</strong>{" "}
+                  {user?.resume ? "Uploaded" : "Not uploaded"}
+                </div>
+                <div>
+                  <strong>Profile Picture:</strong>{" "}
+                  {user?.profilePicture ? "Uploaded" : "Not uploaded"}
+                </div>
+                <div>
+                  <strong>File Loading:</strong> {isFileLoading ? "Yes" : "No"}
+                </div>
+                <div>
+                  <strong>Resume Loading:</strong>{" "}
+                  {isResumeLoading ? "Yes" : "No"}
+                </div>
+                <div>
+                  <strong>API Base URL:</strong>{" "}
+                  {import.meta.env.VITE_API_BASE_URL ||
+                    "http://localhost:5000/api"}
+                </div>
               </CardContent>
             </Card>
           )}
