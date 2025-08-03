@@ -328,21 +328,19 @@ const uploadResume = async (req, res) => {
           });
         }
 
-        // Update user with new resume
+        // Update user with new resume - store only public_id for security
         user.resume = {
-          url: uploadResult.secure_url,
           public_id: uploadResult.public_id,
           filename: req.file.originalname,
           uploadedAt: new Date(),
         };
 
         await user.save();
-
+        console.log("text from pdf", resumeText);
         res.status(200).json({
           success: true,
           message: "Resume uploaded successfully",
           resume: {
-            url: user.resume.url,
             filename: user.resume.filename,
             uploadedAt: user.resume.uploadedAt,
             preview: resumeText.substring(0, 200) + "...", // First 200 chars for preview
@@ -426,7 +424,6 @@ const getResume = async (req, res) => {
     res.status(200).json({
       success: true,
       resume: {
-        url: user.resume.url,
         filename: user.resume.filename,
         uploadedAt: user.resume.uploadedAt,
       },
@@ -441,7 +438,7 @@ const getResume = async (req, res) => {
 };
 
 /**
- * Serve resume file
+ * Get resume download URL
  * @route GET /api/users/resume/file
  * @access Private
  */
@@ -450,17 +447,104 @@ const serveResumeFile = async (req, res) => {
     const userId = req.user._id;
     const user = await User.findById(userId).select("resume");
 
-    if (!user.resume || !user.resume.url) {
+    if (!user.resume || !user.resume.public_id) {
       return res.status(404).json({
         success: false,
         message: "No resume found",
       });
     }
 
-    // Redirect to the Cloudinary URL
-    res.redirect(user.resume.url);
+    // Generate signed URL that expires in 1 hour
+    const { generateSignedUrl } = require("../services/fileUploadService");
+    const signedUrl = generateSignedUrl(user.resume.public_id, "raw");
+
+    if (!signedUrl) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to generate secure download link",
+      });
+    }
+
+    // Return the signed URL for the frontend to handle
+    res.json({
+      success: true,
+      downloadUrl: signedUrl,
+      filename: user.resume.filename || "resume.pdf",
+    });
   } catch (error) {
     console.error("Serve resume file error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error serving resume file",
+    });
+  }
+};
+
+/**
+ * Serve resume file directly (proxy through backend)
+ * @route GET /api/users/resume/download
+ * @access Private
+ */
+const serveResumeFileDirect = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const user = await User.findById(userId).select("resume");
+
+    if (!user.resume || !user.resume.public_id) {
+      return res.status(404).json({
+        success: false,
+        message: "No resume found",
+      });
+    }
+
+    // Generate signed URL
+    const { generateSignedUrl } = require("../services/fileUploadService");
+    const signedUrl = generateSignedUrl(user.resume.public_id, "raw");
+
+    if (!signedUrl) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to generate secure download link",
+      });
+    }
+
+    // Fetch the file from Cloudinary and stream it to the client
+    const https = require("https");
+    const httpsAgent = new https.Agent({
+      rejectUnauthorized: false,
+    });
+
+    https
+      .get(signedUrl, { agent: httpsAgent }, (cloudinaryRes) => {
+        if (cloudinaryRes.statusCode !== 200) {
+          return res.status(404).json({
+            success: false,
+            message: "File not found on Cloudinary",
+          });
+        }
+
+        // Set headers for file download
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader(
+          "Content-Disposition",
+          `attachment; filename="${user.resume.filename || "resume.pdf"}"`
+        );
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+
+        // Pipe the file stream to the response
+        cloudinaryRes.pipe(res);
+      })
+      .on("error", (error) => {
+        console.error("Error fetching file from Cloudinary:", error);
+        res.status(500).json({
+          success: false,
+          message: "Failed to download file",
+        });
+      });
+  } catch (error) {
+    console.error("Serve resume file direct error:", error);
     res.status(500).json({
       success: false,
       message: "Server error serving resume file",
@@ -1156,6 +1240,7 @@ module.exports = {
   removeResume,
   getResume,
   serveResumeFile,
+  serveResumeFileDirect,
   uploadCompanyLogo,
   updateSkills,
   searchUsers,

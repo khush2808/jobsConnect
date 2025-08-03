@@ -45,8 +45,7 @@ const userSchema = new mongoose.Schema(
       public_id: String, // Cloudinary public ID for deletion
     },
     resume: {
-      url: String,
-      public_id: String, // Cloudinary public ID for deletion
+      public_id: String, // Cloudinary public ID for secure access
       filename: String, // Original filename
       uploadedAt: {
         type: Date,
@@ -279,7 +278,7 @@ userSchema.pre("save", function (next) {
     "email",
     "bio",
     "profilePicture.url",
-    "resume.url",
+    "resume.filename",
     "skills",
     "location.city",
     "jobPreferences.roles",
