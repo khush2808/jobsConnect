@@ -31,10 +31,7 @@ describe("Job Portal API - Comprehensive Integration Tests", () => {
     server = importedServer;
 
     // Connect to test database
-    await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    await mongoose.connect(process.env.MONGODB_URI);
 
     // Clean up test database
     await User.deleteMany({});
