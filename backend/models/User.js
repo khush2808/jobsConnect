@@ -321,7 +321,7 @@ userSchema.methods.createPasswordResetToken = function () {
 };
 
 // Indexes for better query performance
-userSchema.index({ email: 1 });
+// Note: email index is already created by unique: true on line 22
 userSchema.index({ "skills.name": 1 });
 userSchema.index({ "location.city": 1 });
 userSchema.index({ "jobPreferences.roles": 1 });
