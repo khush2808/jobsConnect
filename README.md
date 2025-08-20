@@ -47,7 +47,7 @@ A comprehensive full-stack web application inspired by LinkedIn, Upwork, and Ang
 - **Tailwind CSS** - Utility-first CSS framework
 - **shadcn/ui** - Modern UI components
 - **React Router** - Client-side routing
-- **Zustand** - State management
+- **Redux** - State management
 
 ### Security & Performance
 
